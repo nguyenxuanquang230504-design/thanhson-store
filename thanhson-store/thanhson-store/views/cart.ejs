@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Giỏ hàng | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container cart">
+    <h2>Giỏ hàng của bạn</h2>
+
+    <% if (items.length === 0) { %>
+      <p>Giỏ hàng đang trống. <a href="/san-pham">Tiếp tục mua sắm</a></p>
+    <% } else { %>
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th>Sản phẩm</th>
+            <th>Giá</th>
+            <th width="140">Số lượng</th>
+            <th>Tạm tính</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach(it => { %>
+            <tr data-id="<%= it.id %>">
+              <td class="prod">
+                <img src="<%= it.product?.image %>" alt="">
+                <div>
+                  <div class="name"><%= it.product?.name %></div>
+                  <a href="/san-pham/<%= it.id %>">Xem chi tiết</a>
+                </div>
+              </td>
+              <td><%= it.product?.price.toLocaleString() %> ₫</td>
+              <td>
+                <div class="qty-box">
+                  <button class="qty-btn js-dec">-</button>
+                  <input class="qty-input" type="number" min="1" value="<%= it.qty %>">
+                  <button class="qty-btn js-inc">+</button>
+                </div>
+              </td>
+              <td class="subtotal"><%= it.subtotal.toLocaleString() %> ₫</td>
+              <td><button class="link danger js-remove">Xóa</button></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <div class="cart-total">
+        <div>Tổng cộng: <span id="cart-total"><%= total.toLocaleString() %> ₫</span></div>
+        <div class="btn-row">
+          <a class="btn-outline" href="/san-pham">← Tiếp tục mua</a>
+          <a class="btn" href="/thanh-toan">Thanh toán</a>
+        </div>
+      </div>
+    <% } %>
+  </section>
+
+  <%- include('partials/footer') %>
+  <script src="/js/main.js"></script>
+</body>
+</html>

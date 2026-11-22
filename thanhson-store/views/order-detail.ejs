@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Xác nhận đơn hàng | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css?v=20261124">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="tsf-container order-page">
+    <header class="order-confirmation">
+      <p class="eyebrow">THANH SƠN STORE</p>
+      <h1>Đơn hàng đã được tiếp nhận</h1>
+      <p><%= order.confirmationMessage %></p>
+      <div class="order-reference">Mã đơn hàng <strong><%= order.reference %></strong></div>
+      <span class="order-status-badge <%= order.statusTone %>"><%= order.statusLabel %></span>
+    </header>
+
+    <section class="order-progress" aria-label="Tiến trình đơn hàng">
+      <h2>Tiến trình đơn hàng</h2>
+      <ol class="order-timeline">
+        <% order.timeline.forEach(step => { %>
+          <li class="<%= step.complete ? 'complete' : '' %> <%= step.current ? 'current' : '' %>">
+            <span class="timeline-marker" aria-hidden="true"></span>
+            <div>
+              <strong><%= step.label %></strong>
+              <% if (step.at) { %><time datetime="<%= step.at %>"><%= new Date(step.at).toLocaleString('vi-VN') %></time><% } %>
+            </div>
+          </li>
+        <% }) %>
+      </ol>
+    </section>
+
+    <div class="order-content-grid">
+      <section class="order-panel">
+        <h2>Sản phẩm trong đơn</h2>
+        <ul class="order-item-list">
+          <% order.items.forEach(item => { %>
+            <li class="order-item">
+              <% if (item.image) { %><img src="<%= item.image %>" alt="" loading="lazy"><% } %>
+              <div class="order-item-info">
+                <strong><%= item.name %></strong>
+                <span><% if (item.sku) { %>Mã: <%= item.sku %><% } %><% if (item.size) { %> · Cỡ <%= item.size %><% } %><% if (item.color) { %> · <%= item.color %><% } %></span>
+                <span>Số lượng: <%= item.quantity %></span>
+              </div>
+              <strong class="order-item-price"><%= item.subtotal.toLocaleString('vi-VN') %> ₫</strong>
+            </li>
+          <% }) %>
+        </ul>
+        <dl class="order-totals">
+          <div><dt>Tạm tính</dt><dd><%= order.totals.subtotal.toLocaleString('vi-VN') %> ₫</dd></div>
+          <% if (order.totals.discountAmount > 0) { %><div><dt>Ưu đãi</dt><dd>−<%= order.totals.discountAmount.toLocaleString('vi-VN') %> ₫</dd></div><% } %>
+          <% if (order.totals.shippingFee > 0) { %><div><dt>Phí giao hàng</dt><dd><%= order.totals.shippingFee.toLocaleString('vi-VN') %> ₫</dd></div><% } %>
+          <div class="order-total"><dt>Tổng thanh toán</dt><dd><%= order.totals.total.toLocaleString('vi-VN') %> ₫</dd></div>
+        </dl>
+      </section>
+
+      <aside class="order-side-column">
+        <section class="order-panel">
+          <h2>Thông tin nhận hàng</h2>
+          <dl class="order-customer-info">
+            <div><dt>Người nhận</dt><dd><%= order.customer.name %></dd></div>
+            <div><dt>Điện thoại</dt><dd><a href="tel:<%= order.customer.phone %>"><%= order.customer.phone %></a></dd></div>
+            <div><dt>Địa chỉ</dt><dd><%= order.customer.address %></dd></div>
+            <% if (order.customer.notes) { %><div><dt>Ghi chú</dt><dd><%= order.customer.notes %></dd></div><% } %>
+          </dl>
+        </section>
+
+        <section class="order-panel payment-status-panel">
+          <h2>Thanh toán</h2>
+          <p><span>Phương thức</span><strong><%= order.payment.methodLabel %></strong></p>
+          <p><span>Trạng thái</span><strong><%= order.payment.statusLabel %></strong></p>
+          <% if (order.payment.method === 'bank_transfer' && order.payment.statusLabel === 'Chờ thanh toán') { %>
+            <div class="order-bank-details">
+              <% if (order.payment.qrUrl) { %><img class="payment-qr" src="<%= order.payment.qrUrl %>" alt="Mã QR thanh toán đơn hàng"><% } %>
+              <p>Ngân hàng <strong><%= order.payment.bankId %></strong></p>
+              <p>Số tài khoản <strong><%= order.payment.accountNo %></strong>
+                <button class="copy-value" type="button" data-copy="<%= order.payment.accountNo %>">Sao chép</button>
+              </p>
+              <p>Chủ tài khoản <strong><%= order.payment.accountName %></strong></p>
+              <p>Số tiền <strong><%= order.payment.amount.toLocaleString('vi-VN') %> ₫</strong>
+                <button class="copy-value" type="button" data-copy="<%= order.payment.amount %>">Sao chép</button>
+              </p>
+              <p>Nội dung chuyển khoản <strong><%= order.payment.transferDescription %></strong>
+                <button class="copy-value" type="button" data-copy="<%= order.payment.transferDescription %>">Sao chép</button>
+              </p>
+              <% if (order.payment.expiresAt) { %><p class="payment-expiry">Thanh toán trước <time datetime="<%= order.payment.expiresAt %>"><%= new Date(order.payment.expiresAt).toLocaleString('vi-VN') %></time></p><% } %>
+              <p class="inline-note"><%= order.payment.instruction %></p>
+            </div>
+          <% } else if (order.payment.method === 'cod' && order.statusTone !== 'error') { %>
+            <p class="inline-note">Bạn thanh toán cho đơn vị giao hàng khi nhận đủ sản phẩm.</p>
+          <% } else if (order.payment.statusLabel === 'Đã thanh toán') { %>
+            <p class="inline-note">Shop đã xác minh giao dịch thanh toán.</p>
+          <% } %>
+        </section>
+      </aside>
+    </div>
+
+    <div class="order-page-actions">
+      <a class="btn" href="/san-pham">Tiếp tục mua sắm</a>
+      <a class="btn-outline" href="tel:0937685789">Liên hệ shop · 0937 685 789</a>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+  <script>
+    document.querySelectorAll('[data-copy]').forEach(button => {
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.copy);
+          const label = button.textContent;
+          button.textContent = 'Đã sao chép';
+          window.setTimeout(() => { button.textContent = label; }, 1400);
+        } catch (error) {
+          button.textContent = 'Không thể sao chép';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

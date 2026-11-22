@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Yêu thích | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css?v=20261124">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container">
+    <h2>Sản phẩm yêu thích</h2>
+
+    <% if (items.length === 0) { %>
+      <p>Danh sách yêu thích trống. <a href="/san-pham">Thêm ngay</a></p>
+    <% } else { %>
+      <div class="product-grid">
+        <% items.forEach(p => { %>
+          <div class="product-card">
+            <div class="img-wrap">
+              <img src="<%= p.image %>" alt="<%= p.name %>">
+              <div class="hover-options">
+                <button class="btn-icon js-add" data-id="<%= p.id %>" data-requires-variant="<%= Array.isArray(p.variants) && p.variants.length ? 'true' : 'false' %>" aria-label="Thêm vào giỏ">+</button>
+                <button class="btn-icon js-like" data-id="<%= p.id %>" aria-label="Xóa khỏi yêu thích">♡</button>
+                <a class="btn-icon" href="/san-pham/<%= p.id %>">👁️</a>
+              </div>
+            </div>
+            <div class="product-info">
+              <a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a>
+              <div class="price"><%= p.price.toLocaleString() %> ₫</div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+
+  <%- include('partials/footer') %>
+  <script src="/js/main.js"></script>
+</body>
+</html>

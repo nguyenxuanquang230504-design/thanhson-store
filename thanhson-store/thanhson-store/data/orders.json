@@ -1,0 +1,38 @@
+[
+  {
+    "id": "HD-1789661180114",
+    "createdAt": "2026-09-17T16:06:20.114Z",
+    "status": "pending",
+    "customer": {
+      "customerName": "Trần Minh Nhật",
+      "phone": "012345678",
+      "address": "123 Nguyễn Trãi, Hà Nội",
+      "notes": ""
+    },
+    "user": null,
+    "pricing": {
+      "subtotal": 390000,
+      "discountRate": 0,
+      "discountAmount": 0,
+      "totalAmount": 390000
+    },
+    "items": [
+      {
+        "id": "tsf-001",
+        "name": "Áo dài hồng",
+        "image": "/images/item1.jpg",
+        "qty": 1,
+        "price": 390000,
+        "subtotal": 390000
+      }
+    ],
+    "totalAmount": 390000,
+    "payment": {
+      "bankId": "970422",
+      "accountNo": "0123456789",
+      "accountName": "THANH SON FASHION",
+      "transferNote": "HD-1789661180114 012345678"
+    },
+    "paymentQrUrl": "https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=390000&addInfo=HD-1789661180114%20012345678&accountName=THANH%20SON%20FASHION"
+  }
+]

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Thanh Sơn Fashion | Trang chủ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="hero">
+    <img src="/images/banner.jpg" alt="Banner">
+    <div class="overlay">
+      <h1>Thanh Sơn Fashion</h1>
+      <p>Phong cách hiện đại – Đậm dấu ấn Việt</p>
+      <a href="/san-pham" class="btn">Khám phá ngay</a>
+    </div>
+  </section>
+
+  <section class="promotion-banner tsf-container">
+    <div>
+      <p class="eyebrow">ƯU ĐÃI THÀNH VIÊN</p>
+      <h2>Đăng ký hôm nay, giảm 15% tổng đơn hàng</h2>
+      <p>Đăng ký tài khoản, đăng nhập trước khi thanh toán để nhận ưu đãi thành viên.</p>
+    </div>
+    <a class="btn" href="/dang-ky">Đăng ký ngay</a>
+  </section>
+
+  <section class="featured tsf-container">
+    <h2>Sản phẩm nổi bật</h2>
+    <div class="product-grid">
+      <% products.forEach(p => { %>
+        <div class="product-card">
+          <div class="img-wrap">
+            <img src="<%= p.image %>" alt="<%= p.name %>">
+            <div class="hover-options">
+              <button type="button" class="btn-icon js-add" data-id="<%= p.id %>" title="Thêm vào giỏ hàng">🛒</button>
+              <button type="button" class="btn-icon js-like" data-id="<%= p.id %>" title="Thêm vào yêu thích">❤️</button>
+              <a class="btn-icon" href="/san-pham/<%= p.id %>">👁️</a>
+            </div>
+          </div>
+          <div class="product-info">
+            <a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a>
+            <div class="price"><%= p.price.toLocaleString() %> ₫</div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+    <div class="center">
+      <a class="btn-outline" href="/san-pham">Xem tất cả sản phẩm</a>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+  <script src="/js/main.js"></script>
+</body>
+</html>

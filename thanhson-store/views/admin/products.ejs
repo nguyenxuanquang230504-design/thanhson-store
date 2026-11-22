@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sản phẩm | Admin Thanh Sơn</title><link rel="stylesheet" href="/css/admin.css?v=20261124"></head>
+<body class="admin-shell">
+  <%- include('_layout', { active: 'products' }) %>
+  <main class="admin-main">
+    <header class="admin-top"><div><p class="eyebrow">CATALOG</p><h1>Sản phẩm</h1><p class="muted">Quản lý nội dung và trạng thái hiển thị sản phẩm.</p></div><button class="admin-button primary" id="newProduct">+ Thêm sản phẩm</button></header>
+    <p id="productNotice" class="notice" role="status" hidden></p>
+    <section class="admin-panel">
+      <form id="productForm" class="admin-form">
+        <input type="hidden" name="id">
+        <div class="form-title"><div><p class="eyebrow">PRODUCT DETAILS</p><h2 id="productFormTitle">Thêm sản phẩm</h2></div></div>
+        <div class="form-grid">
+          <label>Tên sản phẩm *<input name="name" required maxlength="200"></label>
+          <label>Slug<input name="slug"></label>
+          <label>Mã sản phẩm<input name="productCode"></label>
+          <label>SKU<input name="sku"></label>
+          <label>Danh mục<select name="category"><option value="">Chọn danh mục</option></select></label>
+          <label>Thương hiệu<input name="brand"></label>
+          <label>Giá bán *<input name="price" type="number" min="0" step="1" required></label>
+          <label>Giá gốc<input name="originalPrice" type="number" min="0" step="1"></label>
+          <label>Giá khuyến mãi<input name="salePrice" type="number" min="0" step="1"></label>
+          <label>Tồn kho tổng (tự tính khi có biến thể)<input name="stock" type="number" min="0" step="1" value="0"></label>
+          <label>Chất liệu<input name="material"></label>
+          <label>Đối tượng<input name="genderTarget" placeholder="woman / man / kids"></label>
+          <label>Tags<input name="tags" placeholder="thời trang, công sở"></label>
+          <label>Ảnh chính (URL)<input name="image" type="url" placeholder="https://..."></label>
+          <label>Hoặc tải ảnh lên<input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp"><button class="admin-button" id="uploadProductImage" type="button">Tải ảnh lên Cloudinary</button></label>
+          <label class="wide">Mô tả ngắn<input name="shortDescription"></label>
+          <label class="wide">Mô tả<textarea name="description" rows="4"></textarea></label>
+          <section class="variant-editor wide" aria-labelledby="variantHeading">
+            <div class="variant-editor-heading"><div><h3 id="variantHeading">Tồn kho theo biến thể</h3><p class="muted">Mỗi dòng là một tổ hợp cỡ/màu có tồn kho riêng.</p></div><button class="admin-button" id="addVariant" type="button">+ Thêm biến thể</button></div>
+            <div id="variantRows" class="variant-rows"></div>
+          </section>
+          <label>Trạng thái<select name="productStatus"><option value="DRAFT">Bản nháp</option><option value="PUBLISHED">Đang bán</option><option value="UNPUBLISHED">Ẩn</option><option value="ARCHIVED">Lưu trữ</option></select></label>
+          <label class="check-label"><input name="isFeatured" type="checkbox" value="true"> Sản phẩm nổi bật</label>
+        </div>
+        <div class="admin-actions"><button class="admin-button primary">Lưu sản phẩm</button><button class="admin-button" id="cancelProduct" type="button">Làm mới</button></div>
+      </form>
+    </section>
+    <section class="admin-panel">
+      <div class="table-heading"><h2>Danh sách sản phẩm</h2><div class="product-list-filters"><select id="stockFilter" aria-label="Lọc theo tồn kho"><option value="">Mọi mức tồn kho</option><option value="low">Sắp hết hàng</option><option value="out">Hết hàng</option></select><input id="productSearch" type="search" placeholder="Tìm tên, SKU..."></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>SKU</th><th>Danh mục</th><th>Giá</th><th>Tồn kho</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="productRows"><tr><td colspan="7">Đang tải...</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <script src="/js/admin.js"></script>
+  <script>
+    (() => {
+      const form = document.getElementById('productForm'), rows = document.getElementById('productRows'), notice = document.getElementById('productNotice');
+      const variantRows = document.getElementById('variantRows');
+      let products = [], categories = [];
+      function message(text,error=false) { notice.hidden=false; notice.textContent=text; notice.className=`notice${error?' error':''}`; }
+      function addVariantRow(variant={}) {
+        const row=document.createElement('div');row.className='variant-row';row.dataset.id=variant._id||'';
+        const fields=[['size','Kích cỡ',variant.size||''],['color','Màu sắc',variant.color||''],['sku','SKU biến thể',variant.sku||'']];
+        fields.forEach(([key,label,value])=>{
+          const wrap=document.createElement('label');wrap.textContent=label;
+          const input=document.createElement('input');input.dataset.variant=key;input.value=value;
+          if(key==='sku')input.maxLength=80;
+          wrap.appendChild(input);row.appendChild(wrap);
+        });
+        const stockLabel=document.createElement('label');stockLabel.textContent='Tồn kho';
+        const stockInput=document.createElement('input');stockInput.dataset.variant='stock';stockInput.type='number';stockInput.min='0';stockInput.step='1';stockInput.value=variant.stock??0;stockLabel.appendChild(stockInput);row.appendChild(stockLabel);
+        const adjustmentLabel=document.createElement('label');adjustmentLabel.textContent='Điều chỉnh giá';
+        const adjustment=document.createElement('input');adjustment.dataset.variant='priceAdjustment';adjustment.type='number';adjustment.step='1';adjustment.value=variant.priceAdjustment??0;adjustmentLabel.appendChild(adjustment);row.appendChild(adjustmentLabel);
+        const availability=document.createElement('label');availability.className='variant-availability';
+        const available=document.createElement('input');available.dataset.variant='available';available.type='checkbox';available.checked=variant.available!==false;availability.append(available,document.createTextNode(' Đang bán'));row.appendChild(availability);
+        const remove=document.createElement('button');remove.type='button';remove.className='table-action danger';remove.textContent='Xóa';remove.addEventListener('click',()=>{row.remove();syncStockMode();});row.appendChild(remove);
+        row.querySelector('[data-variant="stock"]').addEventListener('input',syncStockMode);
+        variantRows.appendChild(row);syncStockMode();
+      }
+      function syncStockMode() {
+        const hasVariants=variantRows.children.length>0;
+        const total=[...variantRows.querySelectorAll('[data-variant="stock"]')].reduce((sum,input)=>sum+(Number(input.value)||0),0);
+        form.elements.stock.readOnly=hasVariants;
+        if(hasVariants)form.elements.stock.value=String(total);
+      }
+      function setVariants(items) { variantRows.replaceChildren();(items||[]).forEach(addVariantRow);syncStockMode(); }
+      function collectVariants() {
+        return [...variantRows.children].map(row=>{
+          const value=key=>row.querySelector(`[data-variant="${key}"]`);
+          return {...(row.dataset.id?{_id:row.dataset.id}:{}),size:value('size').value.trim(),color:value('color').value.trim(),sku:value('sku').value.trim(),stock:Number(value('stock').value),priceAdjustment:Number(value('priceAdjustment').value||0),available:value('available').checked};
+        });
+      }
+      function resetForm() { form.reset();form.elements.id.value='';form.elements.stock.value='0';document.getElementById('productFormTitle').textContent='Thêm sản phẩm';setVariants([]); }
+      function render() {
+        const q=document.getElementById('productSearch').value.toLocaleLowerCase('vi');
+        const items=products.filter(p=>`${p.name} ${p.sku} ${p.productCode}`.toLocaleLowerCase('vi').includes(q));
+        rows.replaceChildren();
+        if(!items.length){rows.innerHTML='<tr><td colspan="7">Chưa có sản phẩm phù hợp.</td></tr>';return;}
+        items.forEach(p=>{
+          const tr=document.createElement('tr');
+          const name=document.createElement('td'); name.className='product-name-cell';
+          if(p.image){const img=document.createElement('img');img.src=p.image;img.alt='';name.appendChild(img);}
+          const title=document.createElement('span');title.textContent=p.name;name.appendChild(title);tr.appendChild(name);
+          [p.sku||'—',p.category?.name||p.categoryName||p.categorySlug||'—',`${Number(p.salePrice??p.price).toLocaleString('vi-VN')} ₫`,`${Number(p.stock||0).toLocaleString('vi-VN')} ${Number(p.stock||0)<=0?'· Hết hàng':''}`,p.productStatus].forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.appendChild(td);});
+          const actions=document.createElement('td');
+          const edit=document.createElement('button');edit.className='table-action';edit.textContent='Sửa';
+          edit.addEventListener('click',()=>{
+            form.elements.id.value=p._id;
+            ['name','slug','productCode','sku','price','originalPrice','salePrice','stock','brand','material','genderTarget','image','shortDescription','description','productStatus'].forEach(key=>{form.elements[key].value=p[key]??'';});
+            form.elements.category.value=p.category?._id||'';
+            form.elements.tags.value=(p.tags||[]).join(', ');
+            setVariants(p.variants||[]);
+            form.elements.isFeatured.checked=Boolean(p.isFeatured);
+            document.getElementById('productFormTitle').textContent='Chỉnh sửa sản phẩm';form.scrollIntoView({behavior:'smooth'});
+          });
+          const archive=document.createElement('button');archive.className='table-action danger';archive.textContent='Lưu trữ';
+          archive.addEventListener('click',async()=>{if(!confirm(`Lưu trữ “${p.name}”?`))return;const r=await fetch(`/api/admin/products/${p._id}`,{method:'DELETE'});const d=await r.json();if(!r.ok)return message(d.message||'Không thể lưu trữ.',true);message('Đã lưu trữ sản phẩm.');loadProducts();});
+          actions.append(edit,archive);tr.appendChild(actions);rows.appendChild(tr);
+        });
+      }
+      async function loadCategories() {
+        const r=await fetch('/api/admin/categories'), d=await r.json();
+        if(!r.ok)throw new Error(d.message||'Không thể tải danh mục.');
+        categories=d.items; const select=form.elements.category;select.replaceChildren(new Option('Chọn danh mục',''));
+        categories.filter(c=>c.status!=='ARCHIVED').forEach(c=>select.add(new Option(c.name,c._id)));
+      }
+      async function loadProducts() {
+        const q=document.getElementById('productSearch').value;
+        const stockStatus=document.getElementById('stockFilter').value;
+        const r=await fetch(`/api/admin/products?q=${encodeURIComponent(q)}&stockStatus=${encodeURIComponent(stockStatus)}`), d=await r.json();
+        if(!r.ok)return message(d.message||'Không thể tải sản phẩm.',true);
+        products=d.items;render();
+      }
+      form.addEventListener('submit',async e=>{
+        e.preventDefault();const data=Object.fromEntries(new FormData(form));const id=data.id;delete data.id;
+        data.isFeatured=form.elements.isFeatured.checked;
+        data.variants=collectVariants();
+        const r=await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const d=await r.json();if(!r.ok)return message(d.message||'Không thể lưu sản phẩm.',true);
+        message(id?'Đã cập nhật sản phẩm.':'Đã tạo sản phẩm.');resetForm();await loadProducts();
+      });
+      document.getElementById('newProduct').addEventListener('click',()=>{resetForm();form.scrollIntoView({behavior:'smooth'});});
+      document.getElementById('cancelProduct').addEventListener('click',resetForm);
+      document.getElementById('addVariant').addEventListener('click',()=>addVariantRow());
+      document.getElementById('stockFilter').addEventListener('change',loadProducts);
+      document.getElementById('uploadProductImage').addEventListener('click',async()=>{
+        const file=document.getElementById('productImageFile').files[0];
+        if(!file)return message('Chọn một ảnh JPEG, PNG hoặc WebP trước.',true);
+        if(file.size>5*1024*1024)return message('Ảnh phải nhỏ hơn 5 MB.',true);
+        const dataUrl=await new Promise((resolve,reject)=>{
+          const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Không thể đọc tệp ảnh.'));reader.readAsDataURL(file);
+        }).catch(error=>{message(error.message,true);return null;});
+        if(!dataUrl)return;
+        const response=await fetch('/api/admin/images',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataUrl})});
+        const result=await response.json();
+        if(!response.ok)return message(result.message||'Không thể tải ảnh lên.',true);
+        form.elements.image.value=result.image;
+        message('Đã tải ảnh lên. URL đã được thêm vào sản phẩm.');
+      });
+      document.getElementById('productSearch').addEventListener('input',()=>{clearTimeout(window.productSearchTimer);window.productSearchTimer=setTimeout(loadProducts,250);});
+      Promise.all([loadCategories(),loadProducts()]).catch(e=>message(e.message,true));
+    })();
+  </script>
+</body>
+</html>

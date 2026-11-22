@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Thanh toán | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container checkout-layout">
+    <div class="checkout-box">
+      <h2>Thông tin thanh toán</h2>
+      <% if (user) { %>
+        <div class="success-msg">Thành viên được giảm 15% trên tổng đơn hàng.</div>
+      <% } else { %>
+        <div class="inline-note">Bạn có thể thanh toán không cần tài khoản. Vui lòng điền đầy đủ thông tin nhận hàng.</div>
+      <% } %>
+      <form id="checkoutForm" class="form-grid">
+        <div class="form-group">
+          <label>Họ tên người nhận</label>
+          <input type="text" name="customerName" required value="<%= user ? (user.fullName || user.username) : '' %>">
+        </div>
+        <div class="form-group">
+          <label>Số điện thoại</label>
+          <input type="tel" name="phone" required value="<%= user ? (user.phone || '') : '' %>">
+        </div>
+        <div class="form-group">
+          <label>Địa chỉ giao hàng</label>
+          <textarea name="address" required placeholder="Nhập địa chỉ nhận hàng"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Ghi chú</label>
+          <textarea name="notes" placeholder="Ghi chú thêm nếu cần"></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Đặt hàng</button>
+          <a class="btn-outline" href="/gio-hang">Quay lại giỏ hàng</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="summary-box">
+      <h3>Tóm tắt đơn hàng</h3>
+      <ul>
+        <% cart.items.forEach(item => { %>
+          <li>
+            <span><%= item.product.name %> x <%= item.qty %></span>
+            <strong><%= item.subtotal.toLocaleString() %> ₫</strong>
+          </li>
+        <% }) %>
+      </ul>
+      <div class="summary-line">Tạm tính: <%= cart.totalAmount.toLocaleString() %> ₫</div>
+      <% if (user) { %>
+        <div class="summary-line discount">Giảm thành viên 15%: -<%= Math.round(cart.totalAmount * discountRate).toLocaleString() %> ₫</div>
+      <% } %>
+      <div class="total">Thanh toán: <%= Math.round(cart.totalAmount * (1 - discountRate)).toLocaleString() %> ₫</div>
+    </aside>
+  </section>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const payload = Object.fromEntries(form.entries());
+
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      if (!result.ok) {
+        alert(result.message || 'Thanh toán thất bại');
+        return;
+      }
+
+      alert('Đặt hàng thành công!');
+      window.location.href = '/don-hang';
+    });
+  </script>
+</body>
+</html>

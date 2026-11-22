@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Đăng ký | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container">
+    <div class="auth-shell">
+      <h2>Đăng ký tài khoản</h2>
+      <% if (message) { %>
+        <div class="error-msg"><%= message %></div>
+      <% } %>
+      <p class="member-note">Đăng ký và đăng nhập để nhận ưu đãi giảm 15% trên tổng đơn hàng.</p>
+      <form id="registerForm" class="form-grid">
+        <div class="form-group">
+          <label>Họ tên</label>
+          <input type="text" name="fullName" placeholder="Nhập họ tên" required>
+        </div>
+        <div class="form-group">
+          <label>Số điện thoại</label>
+          <input type="tel" name="phone" placeholder="Nhập số điện thoại" required>
+        </div>
+        <div class="form-group">
+          <label>Tên đăng nhập</label>
+          <input type="text" name="username" required>
+        </div>
+        <div class="form-group">
+          <label>Mật khẩu</label>
+          <input type="password" name="password" minlength="6" required>
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Đăng ký</button>
+        </div>
+        <p class="auth-switch">Đã có tài khoản? <a href="/dang-nhap">Đăng nhập</a></p>
+      </form>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = Object.fromEntries(new FormData(e.target).entries());
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        alert(result.message || 'Đăng ký thất bại');
+        return;
+      }
+      window.location.href = '/dang-nhap?message=' + encodeURIComponent(result.message);
+    });
+  </script>
+</body>
+</html>

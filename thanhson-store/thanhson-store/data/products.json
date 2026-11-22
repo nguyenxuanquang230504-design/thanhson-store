@@ -1,0 +1,66 @@
+[
+  {
+    "id": "tsf-001",
+    "name": "Áo dài hồng",
+    "price": 390000,
+    "image": "/images/item1.jpg",
+    "category": "woman",
+    "desc": "Thiết kế thanh lịch, chất liệu mềm mịn, phù hợp sự kiện."
+  },
+  {
+    "id": "tsf-002",
+    "name": "Áo dài trắng",
+    "price": 420000,
+    "image": "/images/item2.jpg",
+    "category": "woman",
+    "desc": "Form dáng hiện đại, tôn nét nữ tính."
+  },
+  {
+    "id": "tsf-003",
+    "name": "Áo cổ vuông",
+    "price": 410000,
+    "image": "/images/tsf-003.jpg",
+    "category": "woman",
+    "desc": "Cổ vuông thời thượng, phối đồ đa phong cách."
+  },
+  {
+    "id": "tsf-004",
+    "name": "Váy dạ hội",
+    "price": 440000,
+    "image": "/images/tsf-004.jpg",
+    "category": "woman",
+    "desc": "Lịch sự tinh tế, phù hợp môi trường làm việc."
+  },
+  {
+    "id": "tsf-005",
+    "name": "Áo sơ mi nam premium",
+    "price": 520000,
+    "image": "/images/tsf-005.jpg",
+    "category": "man",
+    "desc": "Sơ mi nam lịch lãm, chất liệu co giãn và thoáng mát."
+  },
+  {
+    "id": "tsf-006",
+    "name": "Áo suit nam",
+    "price": 690000,
+    "image": "/images/tsf-006.jpg",
+    "category": "man",
+    "desc": "Phù hợp sự kiện công sở và các buổi gặp gỡ quan trọng."
+  },
+  {
+    "id": "tsf-007",
+    "name": "Áo khoác trẻ em dễ thương",
+    "price": 350000,
+    "image": "/images/tsf-007.jpg",
+    "category": "kids",
+    "desc": "Thiết kế ấm áp, an toàn cho bé và dễ phối đồ."
+  },
+  {
+    "id": "tsf-008",
+    "name": "Set đồ bé gái năng động",
+    "price": 460000,
+    "image": "/images/tsf-008.jpg",
+    "category": "kids",
+    "desc": "Dễ mặc, thoải mái, phong cách trẻ trung cho các hoạt động hằng ngày."
+  }
+]

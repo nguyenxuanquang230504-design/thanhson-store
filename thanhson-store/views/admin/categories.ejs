@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Danh mục | Admin Thanh Sơn</title><link rel="stylesheet" href="/css/admin.css"></head>
+<body class="admin-shell">
+  <%- include('_layout', { active: 'categories' }) %>
+  <main class="admin-main">
+    <header class="admin-top"><div><p class="eyebrow">CATALOG</p><h1>Danh mục</h1><p class="muted">Tạo và sắp xếp danh mục cho cửa hàng.</p></div><button class="admin-button primary" id="newCategory">+ Thêm danh mục</button></header>
+    <p id="categoryNotice" class="notice" role="status" hidden></p>
+    <section class="admin-panel">
+      <form id="categoryForm" class="admin-form">
+        <input type="hidden" name="id">
+        <div class="form-title"><div><p class="eyebrow">CATEGORY DETAILS</p><h2 id="categoryFormTitle">Thêm danh mục</h2></div></div>
+        <div class="form-grid">
+          <label>Tên danh mục *<input name="name" required maxlength="120" placeholder="Ví dụ: Áo sơ mi"></label>
+          <label>Slug<input name="slug" placeholder="Tự tạo từ tên nếu để trống"></label>
+          <label>Danh mục cha<select name="parent"><option value="">Không có</option></select></label>
+          <label>Thứ tự hiển thị<input type="number" name="displayOrder" value="0" step="1"></label>
+          <label>Trạng thái<select name="status"><option value="DRAFT">Bản nháp</option><option value="PUBLISHED">Đang hiển thị</option><option value="ARCHIVED">Lưu trữ</option></select></label>
+          <label>Ảnh danh mục (URL)<input name="image" type="url" placeholder="https://..."></label>
+          <label class="wide">Mô tả<textarea name="description" rows="3"></textarea></label>
+          <label>SEO title<input name="seoTitle" maxlength="160"></label>
+          <label>SEO description<input name="seoDescription" maxlength="320"></label>
+        </div>
+        <div class="admin-actions"><button class="admin-button primary" type="submit">Lưu danh mục</button><button class="admin-button" id="cancelCategory" type="button">Làm mới</button></div>
+      </form>
+    </section>
+    <section class="admin-panel">
+      <div class="table-heading"><h2>Tất cả danh mục</h2><input id="categorySearch" type="search" placeholder="Tìm danh mục..."></div>
+      <div class="table-wrap"><table><thead><tr><th>Danh mục</th><th>Slug</th><th>Danh mục cha</th><th>Sản phẩm</th><th>Thứ tự</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="categoryRows"><tr><td colspan="7">Đang tải...</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <script src="/js/admin.js"></script>
+  <script>
+    (() => {
+      const form = document.getElementById('categoryForm');
+      const rows = document.getElementById('categoryRows');
+      const notice = document.getElementById('categoryNotice');
+      let categories = [];
+      function message(text, error = false) { notice.hidden = false; notice.textContent = text; notice.className = `notice${error ? ' error' : ''}`; }
+      function resetForm() { form.reset(); form.elements.id.value = ''; form.elements.displayOrder.value = '0'; document.getElementById('categoryFormTitle').textContent = 'Thêm danh mục'; }
+      function render() {
+        const q = document.getElementById('categorySearch').value.toLocaleLowerCase('vi');
+        const matches = categories.filter(c => `${c.name} ${c.slug}`.toLocaleLowerCase('vi').includes(q));
+        rows.replaceChildren();
+        if (!matches.length) { rows.innerHTML = '<tr><td colspan="7">Chưa có danh mục phù hợp.</td></tr>'; return; }
+        matches.forEach(c => {
+          const tr = document.createElement('tr');
+          const cells = [c.name, c.slug, c.parent?.name || '—', String(c.productCount || 0), String(c.displayOrder), c.status];
+          cells.forEach(value => { const td = document.createElement('td'); td.textContent = value; tr.appendChild(td); });
+          const actions = document.createElement('td');
+          const edit = document.createElement('button'); edit.className = 'table-action'; edit.textContent = 'Sửa';
+          edit.addEventListener('click', () => {
+            form.elements.id.value = c._id;
+            ['name','slug','description','image','banner','displayOrder','status','seoTitle','seoDescription'].forEach(key => { form.elements[key].value = c[key] ?? (key === 'displayOrder' ? 0 : ''); });
+            form.elements.parent.value = c.parent?._id || '';
+            document.getElementById('categoryFormTitle').textContent = 'Chỉnh sửa danh mục';
+            form.scrollIntoView({ behavior:'smooth', block:'start' });
+          });
+          const archive = document.createElement('button'); archive.className = 'table-action danger'; archive.textContent = 'Lưu trữ';
+          archive.addEventListener('click', async () => {
+            if (!confirm(`Lưu trữ “${c.name}”? Danh mục chỉ lưu trữ khi không còn sản phẩm hoặc danh mục con.`)) return;
+            const response = await fetch(`/api/admin/categories/${c._id}`, { method:'DELETE' });
+            const result = await response.json();
+            if (!response.ok) return message(`${result.message} Sản phẩm: ${result.products || 0}, danh mục con: ${result.children || 0}.`, true);
+            message('Đã lưu trữ danh mục.'); load();
+          });
+          actions.append(edit, archive); tr.appendChild(actions); rows.appendChild(tr);
+        });
+      }
+      async function load() {
+        const response = await fetch('/api/admin/categories');
+        const result = await response.json();
+        if (!response.ok) return message(result.message || 'Không thể tải danh mục.', true);
+        categories = result.items;
+        const select = form.elements.parent;
+        const selected = select.value;
+        select.replaceChildren(new Option('Không có',''));
+        categories.filter(c => c.status !== 'ARCHIVED').forEach(c => select.add(new Option(c.name,c._id)));
+        select.value = selected;
+        render();
+      }
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+        const id = data.id; delete data.id;
+        const response = await fetch(id ? `/api/admin/categories/${id}` : '/api/admin/categories', {
+          method:id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (!response.ok) return message(result.message || 'Không thể lưu danh mục.', true);
+        message(id ? 'Đã cập nhật danh mục.' : 'Đã tạo danh mục.');
+        resetForm(); await load();
+      });
+      document.getElementById('categorySearch').addEventListener('input', render);
+      document.getElementById('newCategory').addEventListener('click', () => { resetForm(); form.scrollIntoView({behavior:'smooth'}); });
+      document.getElementById('cancelCategory').addEventListener('click', resetForm);
+      load();
+    })();
+  </script>
+</body>
+</html>

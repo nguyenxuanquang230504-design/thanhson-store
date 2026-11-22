@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Giỏ hàng | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css?v=20261124">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container cart">
+    <h2>Giỏ hàng của bạn</h2>
+    <% const stockConflict = items.some(item => item.invalidVariant || item.qty > item.availableStock); %>
+
+    <% if (items.length === 0) { %>
+      <p>Giỏ hàng đang trống. <a href="/san-pham">Tiếp tục mua sắm</a></p>
+    <% } else { %>
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th>Sản phẩm</th>
+            <th>Giá</th>
+            <th width="140">Số lượng</th>
+            <th>Tạm tính</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach(it => { %>
+            <tr data-id="<%= it.id %>" data-variant-id="<%= it.variantId || '' %>">
+              <td class="prod">
+                <img src="<%= it.product?.image %>" alt="">
+                <div>
+                  <div class="name"><%= it.product?.name %></div>
+                  <% if (it.variant) { %><small><%= [it.variant.size, it.variant.color].filter(Boolean).join(' · ') %></small><% } %>
+                  <% if (it.invalidVariant || it.qty > it.availableStock) { %><small class="cart-stock-warning">Tồn kho đã thay đổi. Vui lòng chỉnh số lượng.</small><% } %>
+                  <a href="/san-pham/<%= it.id %>">Xem chi tiết</a>
+                </div>
+              </td>
+              <td><%= it.price.toLocaleString() %> ₫</td>
+              <td>
+                <div class="qty-box">
+                  <button type="button" class="qty-btn js-dec" aria-label="Giảm số lượng" <%= it.qty <= 1 ? 'disabled' : '' %>>−</button>
+                  <input class="qty-input" type="number" inputmode="numeric" min="1" max="<%= it.availableStock %>" value="<%= it.qty %>" aria-label="Số lượng <%= it.product?.name %>">
+                  <button type="button" class="qty-btn js-inc" aria-label="Tăng số lượng" <%= it.qty >= it.availableStock ? 'disabled' : '' %>>+</button>
+                </div>
+              </td>
+              <td class="subtotal"><%= it.subtotal.toLocaleString() %> ₫</td>
+              <td><button class="link danger js-remove">Xóa</button></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <div class="cart-total">
+        <div>Tổng cộng: <span id="cart-total"><%= total.toLocaleString() %> ₫</span></div>
+        <div class="btn-row">
+          <a class="btn-outline" href="/san-pham">← Tiếp tục mua</a>
+          <a class="btn <%= stockConflict ? 'is-disabled' : '' %>" href="<%= stockConflict ? '#' : '/thanh-toan' %>" aria-disabled="<%= stockConflict %>">Thanh toán</a>
+        </div>
+      </div>
+    <% } %>
+  </section>
+
+  <%- include('partials/footer') %>
+  <script src="/js/main.js"></script>
+</body>
+</html>

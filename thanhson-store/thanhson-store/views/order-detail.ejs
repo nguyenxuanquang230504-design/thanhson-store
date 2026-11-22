@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Hóa đơn | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container" style="padding: 30px 0 60px;">
+    <h2>Hóa đơn đặt hàng</h2>
+    <div class="payment-box">
+      <h3>Quét QR để chuyển khoản</h3>
+      <img class="payment-qr" src="<%= order.paymentQrUrl %>" alt="QR chuyển khoản">
+      <p>Ngân hàng: <strong><%= order.payment.bankId %></strong></p>
+      <p>Số tài khoản: <strong><%= order.payment.accountNo %></strong></p>
+      <p>Chủ tài khoản: <strong><%= order.payment.accountName %></strong></p>
+      <p>Nội dung: <strong><%= order.payment.transferNote %></strong></p>
+      <p class="inline-note">Vui lòng chuyển đúng số tiền thanh toán trên hóa đơn.</p>
+    </div>
+    <div class="json-box"><%= JSON.stringify(order, null, 2) %></div>
+    <div style="margin-top: 20px;">
+      <a class="btn" href="/san-pham">Tiếp tục mua sắm</a>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

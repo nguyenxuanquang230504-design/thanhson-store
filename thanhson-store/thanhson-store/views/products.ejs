@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Sản phẩm | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container">
+    <% if (searchMode) { %>
+      <h2>Kết quả tìm kiếm<%= query ? ' cho "' + query + '"' : '' %></h2>
+      <form class="search-page-form" action="/tim-kiem" method="get" role="search">
+        <input type="search" name="q" value="<%= query %>" placeholder="Tìm theo tên, mô tả hoặc danh mục" aria-label="Tìm sản phẩm">
+        <button class="btn" type="submit">Tìm kiếm</button>
+      </form>
+    <% } else { %>
+      <h2>Tất cả sản phẩm <%= category ? '(' + category + ')' : '' %></h2>
+    <% } %>
+
+    <div class="filters">
+      <a href="/san-pham" class="chip <%= !category ? 'active' : '' %>">Tất cả</a>
+      <a href="/san-pham?category=woman" class="chip <%= category==='woman'?'active':'' %>">Woman</a>
+      <a href="/san-pham?category=man" class="chip <%= category==='man'?'active':'' %>">Man</a>
+      <a href="/san-pham?category=kids" class="chip <%= category==='kids'?'active':'' %>">Kids</a>
+    </div>
+
+    <% if (!products.length) { %>
+      <p class="empty-state">Không tìm thấy sản phẩm phù hợp. Hãy thử từ khóa khác.</p>
+    <% } %>
+
+    <div class="product-grid">
+      <% products.forEach(p => { %>
+        <div class="product-card">
+          <div class="img-wrap">
+            <img src="<%= p.image %>" alt="<%= p.name %>">
+            <div class="hover-options">
+              <button type="button" class="btn-icon js-add" data-id="<%= p.id %>" title="Thêm vào giỏ hàng">🛒</button>
+              <button type="button" class="btn-icon js-like" data-id="<%= p.id %>" title="Thêm vào yêu thích">❤️</button>
+              <a class="btn-icon" href="/san-pham/<%= p.id %>">👁️</a>
+            </div>
+          </div>
+          <div class="product-info">
+            <a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a>
+            <div class="price"><%= p.price.toLocaleString() %> ₫</div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+  <script src="/js/main.js"></script>
+</body>
+</html>

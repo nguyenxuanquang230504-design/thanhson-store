@@ -1,0 +1,14 @@
+<aside class="admin-sidebar">
+  <a class="admin-brand" href="/admin">THANH SƠN <span>ATELIER</span></a>
+  <p class="sidebar-label">WORKSPACE</p>
+  <nav>
+    <a href="/admin" class="<%= active==='dashboard'?'active':'' %>"><span>◫</span> Tổng quan</a>
+    <a href="/admin/products" class="<%= active==='products'?'active':'' %>"><span>◇</span> Sản phẩm</a>
+    <a href="/admin/categories" class="<%= active==='categories'?'active':'' %>"><span>▦</span> Danh mục</a>
+    <a href="/admin/orders" class="<%= active==='orders'?'active':'' %>"><span>▤</span> Đơn hàng</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <span><%= admin.email %><small><%= admin.role %></small></span>
+    <button id="adminLogout" type="button">Đăng xuất</button>
+  </div>
+</aside>

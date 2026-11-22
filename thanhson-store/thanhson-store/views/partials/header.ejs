@@ -1,0 +1,48 @@
+<header class="tsf-header">
+  <div class="tsf-container tsf-nav">
+    <div class="tsf-logo">
+      <a href="/">Thanh Sơn <span>Fashion</span></a>
+    </div>
+
+    <nav class="tsf-menu">
+      <a href="/">Trang chủ</a>
+      <div class="tsf-dropdown">
+        <a href="/san-pham" class="has-caret">Sản phẩm</a>
+        <div class="tsf-dropdown-menu">
+          <div>
+            <h4>WOMAN</h4>
+            <a href="/san-pham?category=woman">Áo/Váy nữ</a>
+          </div>
+          <div>
+            <h4>MAN</h4>
+            <a href="/san-pham?category=man">Áo/Quần nam</a>
+          </div>
+          <div>
+            <h4>KIDS</h4>
+            <a href="/san-pham?category=kids">Thời trang trẻ em</a>
+          </div>
+        </div>
+      </div>
+      <a href="/yeu-thich">Yêu thích</a>
+      <a href="/gio-hang">Giỏ hàng</a>
+    </nav>
+
+    <div class="tsf-icons">
+      <form class="search-form" action="/tim-kiem" method="get" role="search">
+        <input type="search" name="q" placeholder="Tìm sản phẩm..." aria-label="Tìm sản phẩm">
+        <button class="icon-btn" type="submit" title="Tìm kiếm">🔍</button>
+      </form>
+      <a class="icon-btn" href="/yeu-thich" title="Yêu thích">❤️
+        <span class="badge" data-badge="wishlist"><%= badges.wishlist %></span>
+      </a>
+      <a class="icon-btn" href="/gio-hang" title="Giỏ hàng">🛒
+        <span class="badge" data-badge="cart"><%= badges.cart %></span>
+      </a>
+      <% if (currentUser) { %>
+        <a class="login-link" href="/dang-nhap" title="Tài khoản"><span>👤</span><span><%= currentUser.fullName || currentUser.username %></span></a>
+      <% } else { %>
+        <a class="login-link" href="/dang-nhap" title="Đăng nhập">👤 Đăng nhập</a>
+      <% } %>
+    </div>
+  </div>
+</header>

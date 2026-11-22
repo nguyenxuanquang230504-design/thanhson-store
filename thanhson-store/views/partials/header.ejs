@@ -1,0 +1,111 @@
+<header class="tsf-header">
+  <div class="announcement-bar">Miễn phí vận chuyển cho đơn từ 500.000₫ <span>•</span> Đổi trả trong 7 ngày</div>
+  <div class="tsf-container tsf-nav">
+    <button class="menu-toggle" type="button" aria-label="Mở menu" aria-expanded="false" aria-controls="mobileMenu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="tsf-logo">
+      <a href="/">Thanh Sơn <span>Fashion</span></a>
+    </div>
+
+    <nav class="tsf-menu" aria-label="Điều hướng chính">
+      <a href="/">Trang chủ</a>
+      <div class="tsf-dropdown">
+        <button type="button" class="mega-trigger has-caret" aria-expanded="false">Sản phẩm</button>
+        <div class="tsf-dropdown-menu">
+          <div class="mega-column">
+            <h4>WOMAN</h4>
+            <a href="/san-pham?category=woman">Tất cả Woman</a>
+            <a href="/tim-kiem?q=ao&category=woman">Áo nữ</a>
+            <a href="/tim-kiem?q=quan&category=woman">Quần nữ</a>
+            <a href="/tim-kiem?q=vay&category=woman">Váy</a>
+            <a href="/tim-kiem?q=dam&category=woman">Đầm</a>
+          </div>
+          <div class="mega-column">
+            <h4>MAN</h4>
+            <a href="/san-pham?category=man">Tất cả Man</a>
+            <a href="/tim-kiem?q=ao&category=man">Áo nam</a>
+            <a href="/tim-kiem?q=quan&category=man">Quần nam</a>
+            <a href="/tim-kiem?q=suit&category=man">Suit</a>
+            <a href="/tim-kiem?q=polo&category=man">Polo</a>
+          </div>
+          <div class="mega-column">
+            <h4>KIDS</h4>
+            <a href="/san-pham?category=kids">Tất cả Kids</a>
+            <a href="/tim-kiem?q=ao&category=kids">Áo trẻ em</a>
+            <a href="/tim-kiem?q=quan&category=kids">Quần trẻ em</a>
+            <a href="/tim-kiem?q=set&category=kids">Bộ đồ trẻ em</a>
+            <a href="/tim-kiem?q=phu+kien&category=kids">Phụ kiện</a>
+          </div>
+        </div>
+      </div>
+      <a href="/san-pham?category=woman">Woman</a>
+      <a href="/san-pham?category=man">Man</a>
+      <a href="/san-pham?category=kids">Kids</a>
+      <a href="/san-pham">Bộ sưu tập</a>
+      <a href="/san-pham?sort=price-asc">Khuyến mãi</a>
+    </nav>
+
+    <div class="tsf-icons">
+      <form class="search-form live-search" action="/tim-kiem" method="get" role="search">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+        <input type="search" name="q" placeholder="Tìm kiếm sản phẩm, phong cách..." aria-label="Tìm kiếm sản phẩm, phong cách..." autocomplete="off" aria-controls="desktopSuggestions">
+        <button class="search-clear" type="button" aria-label="Xóa nội dung tìm kiếm" hidden>×</button>
+        <button class="icon-btn search-submit" type="submit" title="Tìm kiếm" aria-label="Tìm kiếm">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </button>
+        <div id="desktopSuggestions" class="search-suggestions" role="listbox" hidden></div>
+      </form>
+      <a class="icon-btn header-action" href="/yeu-thich" title="Yêu thích" aria-label="Yêu thích">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.2-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.7a4.7 4.7 0 0 1 8.8-2.2 4.7 4.7 0 0 1 8.8 2.2Z"></path></svg>
+        <span class="badge" data-badge="wishlist"><%= badges.wishlist %></span>
+      </a>
+      <a class="icon-btn header-action" href="/gio-hang" title="Giỏ hàng" aria-label="Giỏ hàng">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 8h14l1 12H4L5 8Z"></path><path d="M9 8a3 3 0 0 1 6 0"></path></svg>
+        <span class="badge" data-badge="cart"><%= badges.cart %></span>
+      </a>
+      <% if (currentUser) { %>
+        <a class="login-link" href="/dang-nhap" title="Tài khoản"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span><%= currentUser.fullName || currentUser.username %></span></a>
+      <% } else { %>
+        <a class="login-link" href="/dang-nhap" title="Đăng nhập"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>Đăng nhập</span></a>
+      <% } %>
+    </div>
+  </div>
+  <div class="mobile-search-row">
+    <form class="mobile-search live-search" action="/tim-kiem" method="get" role="search">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+      <input type="search" name="q" placeholder="Tìm kiếm sản phẩm, phong cách..." aria-label="Tìm kiếm sản phẩm, phong cách..." autocomplete="off" aria-controls="mobileSuggestions">
+      <button class="search-clear" type="button" aria-label="Xóa nội dung tìm kiếm" hidden>×</button>
+      <button type="submit" aria-label="Tìm kiếm">Tìm</button>
+      <div id="mobileSuggestions" class="search-suggestions" role="listbox" hidden></div>
+    </form>
+  </div>
+  <div id="mobileMenu" class="mobile-menu" aria-hidden="true" inert>
+    <nav aria-label="Menu di động">
+      <a href="/">Trang chủ</a>
+      <details>
+        <summary>Woman</summary>
+        <a href="/san-pham?category=woman">Tất cả Woman</a>
+        <a href="/tim-kiem?q=ao&category=woman">Áo nữ</a>
+        <a href="/tim-kiem?q=quan&category=woman">Quần nữ</a>
+        <a href="/tim-kiem?q=vay&category=woman">Váy & Đầm</a>
+      </details>
+      <details>
+        <summary>Man</summary>
+        <a href="/san-pham?category=man">Tất cả Man</a>
+        <a href="/tim-kiem?q=ao&category=man">Áo nam</a>
+        <a href="/tim-kiem?q=quan&category=man">Quần nam</a>
+        <a href="/tim-kiem?q=suit&category=man">Suit</a>
+      </details>
+      <details>
+        <summary>Kids</summary>
+        <a href="/san-pham?category=kids">Tất cả Kids</a>
+        <a href="/tim-kiem?q=ao&category=kids">Áo trẻ em</a>
+        <a href="/tim-kiem?q=set&category=kids">Bộ đồ trẻ em</a>
+      </details>
+      <a href="/san-pham">Bộ sưu tập</a>
+      <a href="/san-pham?sort=price-asc">Khuyến mãi</a>
+      <a href="/dang-nhap">Tài khoản / Đăng nhập</a>
+    </nav>
+  </div>
+</header>

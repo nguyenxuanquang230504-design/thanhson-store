@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đơn hàng | Admin Thanh Sơn</title><link rel="stylesheet" href="/css/admin.css"></head>
+<body class="admin-shell">
+  <%- include('_layout', { active: 'orders' }) %>
+  <main class="admin-main">
+    <header class="admin-top"><div><p class="eyebrow">FULFILLMENT</p><h1>Đơn hàng</h1><p class="muted">Tối đa 100 đơn gần nhất · trạng thái và thanh toán được ghi nhận trong lịch sử.</p></div><a class="admin-button" href="/admin">Tổng quan</a></header>
+    <% if (error) { %><div class="notice error"><%= error %></div><% } %>
+    <div id="orderNotice" class="notice" hidden></div>
+    <% if (!error) { %>
+      <section class="admin-panel">
+        <% if (!items.length) { %>
+          <p class="muted">Chưa có đơn hàng.</p>
+        <% } else { %>
+          <div class="table-wrap">
+            <table class="orders-table">
+              <thead><tr><th>Đơn hàng</th><th>Khách hàng</th><th>Sản phẩm</th><th>Thanh toán</th><th>Trạng thái</th><th>Tổng</th><th>Thao tác</th></tr></thead>
+              <tbody>
+                <% items.forEach(order => { %>
+                  <tr data-order-row="<%= order.id %>" data-status="<%= order.status %>" data-payment-method="<%= order.paymentMethod || 'bank_transfer' %>" data-payment-status="<%= order.paymentStatus || 'pending' %>">
+                    <td><strong><%= order.id %></strong><small><%= new Date(order.createdAt).toLocaleString('vi-VN') %></small></td>
+                    <td><strong><%= order.customer?.customerName || '' %></strong><small><a href="tel:<%= order.customer?.phone || '' %>"><%= order.customer?.phone || '' %></a></small><small><%= order.customer?.address || '' %></small></td>
+                    <td><ul class="admin-order-items"><% (order.items || []).forEach(item => { %><li><%= item.name %> × <%= item.qty %><% if (item.size || item.color) { %> · <%= [item.size, item.color].filter(Boolean).join(' / ') %><% } %></li><% }) %></ul></td>
+                    <td><%= order.paymentMethod === 'cod' ? 'COD' : 'Chuyển khoản' %><small class="payment-state"><%= order.paymentStatus || (order.paymentMethod === 'cod' ? 'unpaid' : 'pending') %></small></td>
+                    <td><%= order.status %></td>
+                    <td><strong><%= Number(order.totalAmount || 0).toLocaleString('vi-VN') %> ₫</strong></td>
+                    <td class="order-actions">
+                      <% if (order.paymentMethod !== 'cod' && (order.paymentStatus || 'pending') === 'pending') { %>
+                        <button class="table-action" type="button" data-action="payment" data-value="paid">Xác nhận đã nhận tiền</button>
+                        <button class="table-action danger" type="button" data-action="payment" data-value="failed">Báo thanh toán lỗi</button>
+                      <% } %>
+                      <% if (order.paymentMethod === 'cod' && order.status === 'delivered' && order.paymentStatus !== 'paid') { %>
+                        <button class="table-action" type="button" data-action="payment" data-value="paid">Đã thu tiền</button>
+                      <% } %>
+                      <% if (order.status === 'pending' && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid')) { %>
+                        <button class="table-action" type="button" data-action="status" data-value="confirmed">Xác nhận đơn</button>
+                      <% } %>
+                      <% if (order.status === 'confirmed') { %><button class="table-action" type="button" data-action="status" data-value="processing">Đang chuẩn bị</button><% } %>
+                      <% if (order.status === 'processing') { %><button class="table-action" type="button" data-action="status" data-value="shipped">Đã bàn giao vận chuyển</button><% } %>
+                      <% if (order.status === 'shipped') { %><button class="table-action" type="button" data-action="status" data-value="delivered">Đã giao hàng</button><% } %>
+                      <% if (['pending', 'confirmed', 'processing'].includes(order.status) && order.paymentStatus !== 'paid') { %><button class="table-action danger" type="button" data-action="status" data-value="cancelled">Hủy đơn</button><% } %>
+                      <details class="order-audit">
+                        <summary>Lịch sử</summary>
+                        <ul>
+                          <% (order.statusHistory || []).forEach(event => { %><li>Đơn hàng: <%= event.status %> · <%= new Date(event.changedAt).toLocaleString('vi-VN') %> · <%= event.actor %></li><% }) %>
+                          <% (order.paymentHistory || []).forEach(event => { %><li>Thanh toán: <%= event.status %> · <%= new Date(event.changedAt).toLocaleString('vi-VN') %> · <%= event.actor %></li><% }) %>
+                          <li>Tồn kho đã trừ: <%= order.inventoryDeductedAt ? new Date(order.inventoryDeductedAt).toLocaleString('vi-VN') : 'Không' %></li>
+                          <li>Tồn kho đã hoàn: <%= order.inventoryRestoredAt ? new Date(order.inventoryRestoredAt).toLocaleString('vi-VN') : 'Chưa' %></li>
+                        </ul>
+                      </details>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+    <% } %>
+  </main>
+  <script>
+    document.querySelectorAll('[data-order-row] [data-action]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const row = button.closest('[data-order-row]');
+        const notice = document.getElementById('orderNotice');
+        const endpoint = button.dataset.action === 'payment' ? 'payment' : 'status';
+        button.disabled = true;
+        try {
+          const response = await fetch(`/api/admin/orders/${encodeURIComponent(row.dataset.orderRow)}/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: button.dataset.value })
+          });
+          const result = await response.json();
+          if (!response.ok || !result.ok) throw new Error(result.message || 'Không thể cập nhật đơn hàng.');
+          window.location.reload();
+        } catch (error) {
+          notice.hidden = false;
+          notice.classList.add('error');
+          notice.textContent = error.message || 'Không thể cập nhật đơn hàng.';
+          button.disabled = false;
+        }
+      });
+    });
+  </script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

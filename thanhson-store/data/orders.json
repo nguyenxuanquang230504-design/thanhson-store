@@ -1,0 +1,81 @@
+[
+  {
+    "id": "HD-1789661180114",
+    "createdAt": "2026-09-17T16:06:20.114Z",
+    "status": "pending",
+    "customer": {
+      "customerName": "Trần Minh Nhật",
+      "phone": "012345678",
+      "address": "123 Nguyễn Trãi, Hà Nội",
+      "notes": ""
+    },
+    "user": null,
+    "pricing": {
+      "subtotal": 390000,
+      "discountRate": 0,
+      "discountAmount": 0,
+      "totalAmount": 390000
+    },
+    "items": [
+      {
+        "id": "tsf-001",
+        "name": "Áo dài hồng",
+        "image": "/images/item1.jpg",
+        "qty": 1,
+        "price": 390000,
+        "subtotal": 390000
+      }
+    ],
+    "totalAmount": 390000,
+    "payment": {
+      "bankId": "970422",
+      "accountNo": "0123456789",
+      "accountName": "THANH SON FASHION",
+      "transferNote": "HD-1789661180114 012345678"
+    },
+    "paymentQrUrl": "https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=390000&addInfo=HD-1789661180114%20012345678&accountName=THANH%20SON%20FASHION"
+  },
+  {
+    "id": "HD-1795330078436-D31B42",
+    "createdAt": "2026-11-22T06:47:58.436Z",
+    "status": "pending",
+    "idempotencyKey": "c522f2d5-a977-4c61-a4af-02afa989690c",
+    "inventoryDeductedAt": "2026-11-22T06:47:58.436Z",
+    "customer": {
+      "customerName": "nguyen xuan quang",
+      "phone": "0898410235",
+      "address": "159 ngõ 189 hoàng hoa thám",
+      "notes": ""
+    },
+    "user": null,
+    "pricing": {
+      "subtotal": 390000,
+      "discountRate": 0,
+      "discountAmount": 0,
+      "totalAmount": 390000
+    },
+    "items": [
+      {
+        "id": "tsf-001",
+        "productId": "tsf-001",
+        "variantId": null,
+        "sku": "",
+        "size": "",
+        "color": "",
+        "name": "Áo dài hồng",
+        "image": "/images/item1.jpg",
+        "qty": 1,
+        "price": 390000,
+        "subtotal": 390000
+      }
+    ],
+    "totalAmount": 390000,
+    "payment": {
+      "bankId": "970422",
+      "accountNo": "0011101884099",
+      "accountName": "DINH THI NGOC MAI",
+      "transferNote": "HD-1795330078436-D31B42 0898410235"
+    },
+    "paymentQrUrl": "https://img.vietqr.io/image/970422-0011101884099-compact2.png?amount=390000&addInfo=HD-1795330078436-D31B42%200898410235&accountName=DINH%20THI%20NGOC%20MAI"
+  }
+]

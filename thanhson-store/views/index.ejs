@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Thanh Sơn Fashion | Trang chủ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css?v=20261124">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main>
+    <section class="hero">
+      <img src="/images/banner.jpg" alt="Bộ sưu tập thời trang Thanh Sơn" fetchpriority="high">
+      <div class="hero-overlay">
+        <p class="eyebrow">NEW COLLECTION</p>
+        <h1>Phong cách của bạn, <span>dấu ấn của bạn</span></h1>
+        <p>Thiết kế tinh tế cho những khoảnh khắc hằng ngày và sự kiện đặc biệt.</p>
+        <div class="hero-actions">
+          <a href="/san-pham" class="btn">Khám phá ngay</a>
+          <a href="/san-pham?category=woman" class="btn btn-light">Bộ sưu tập nữ</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="category-strip tsf-container" aria-label="Danh mục nổi bật">
+      <a href="/san-pham?category=woman"><strong>Woman</strong><span>Thời trang nữ</span></a>
+      <a href="/san-pham?category=man"><strong>Man</strong><span>Phong cách nam</span></a>
+      <a href="/san-pham?category=kids"><strong>Kids</strong><span>Thời trang bé yêu</span></a>
+    </section>
+
+    <section class="featured tsf-container">
+      <div class="section-heading">
+        <div><p class="eyebrow">ĐƯỢC YÊU THÍCH</p><h2>Sản phẩm nổi bật</h2></div>
+        <a class="text-link" href="/san-pham">Xem tất cả →</a>
+      </div>
+      <div class="product-grid">
+        <% featured.forEach(p => { %>
+          <article class="product-card">
+            <a class="img-wrap" href="/san-pham/<%= p.id %>" aria-label="<%= p.name %>">
+              <img src="<%= p.image %>" alt="<%= p.name %>" loading="lazy" width="360" height="480">
+              <span class="product-badge">NEW</span>
+            </a>
+            <div class="product-info">
+              <a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a>
+              <div class="price"><%= p.price.toLocaleString() %> ₫</div>
+              <div class="card-actions">
+                <button type="button" class="btn-icon js-like" data-id="<%= p.id %>" title="Yêu thích" aria-label="Yêu thích">♡</button>
+                <button type="button" class="btn quick-add js-add" data-id="<%= p.id %>" data-requires-variant="<%= Array.isArray(p.variants) && p.variants.length ? 'true' : 'false' %>"><%= Array.isArray(p.variants) && p.variants.length ? 'Chọn phân loại' : 'Thêm vào giỏ' %></button>
+              </div>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="collection-grid tsf-container">
+      <a class="collection-card" href="/san-pham?category=woman"><span>Woman Collection</span><strong>Nữ tính & thanh lịch</strong></a>
+      <a class="collection-card dark" href="/san-pham?category=man"><span>Man Collection</span><strong>Lịch lãm hiện đại</strong></a>
+      <a class="collection-card kids" href="/san-pham?category=kids"><span>Kids Collection</span><strong>Năng động & dễ thương</strong></a>
+    </section>
+
+    <section class="featured tsf-container">
+      <div class="section-heading">
+        <div><p class="eyebrow">MỚI CẬP NHẬT</p><h2>Hàng mới về</h2></div>
+        <a class="text-link" href="/san-pham">Khám phá →</a>
+      </div>
+      <div class="product-grid">
+        <% newArrivals.forEach(p => { %>
+          <article class="product-card">
+            <a class="img-wrap" href="/san-pham/<%= p.id %>"><img src="<%= p.image %>" alt="<%= p.name %>" loading="lazy" width="360" height="480"></a>
+            <div class="product-info"><a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a><div class="price"><%= p.price.toLocaleString() %> ₫</div></div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="brand-story tsf-container">
+      <div><p class="eyebrow">THANH SƠN FASHION</p><h2>Thời trang cho cuộc sống hiện đại</h2></div>
+      <p>Chúng tôi tạo ra những sản phẩm dễ mặc, dễ phối và giữ được dấu ấn cá tính trong từng chi tiết.</p>
+    </section>
+
+    <section class="reviews tsf-container">
+      <div class="section-heading"><div><p class="eyebrow">KHÁCH HÀNG NÓI GÌ</p><h2>Được tin chọn mỗi ngày</h2></div></div>
+      <div class="review-grid">
+        <blockquote>“Sản phẩm đẹp, đóng gói cẩn thận và giao hàng nhanh.”<cite>— Khách hàng tại Hà Nội</cite></blockquote>
+        <blockquote>“Chất liệu dễ mặc, form dáng lịch sự, rất hợp để đi làm.”<cite>— Khách hàng nữ</cite></blockquote>
+        <blockquote>“Đặt hàng đơn giản và được tư vấn đổi size tận tình.”<cite>— Khách hàng tại TP.HCM</cite></blockquote>
+      </div>
+    </section>
+
+    <section class="newsletter tsf-container">
+      <div><p class="eyebrow">ƯU ĐÃI ĐỘC QUYỀN</p><h2>Nhận tin mới & khuyến mãi</h2></div>
+      <form id="newsletterForm"><label class="sr-only" for="newsletterEmail">Email</label><input id="newsletterEmail" type="email" placeholder="Email của bạn" required><button class="btn" type="submit">Đăng ký</button></form>
+    </section>
+  </main>
+
+  <%- include('partials/footer') %>
+  <script src="/js/main.js"></script>
+</body>
+</html>

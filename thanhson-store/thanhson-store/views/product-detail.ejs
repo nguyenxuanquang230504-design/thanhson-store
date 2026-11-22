@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title><%= product.name %> | Thanh Sơn Fashion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="tsf-container detail">
+    <div class="detail-grid">
+      <div class="detail-image">
+        <img src="<%= product.image %>" alt="<%= product.name %>">
+      </div>
+      <div class="detail-info">
+        <h1><%= product.name %></h1>
+        <div class="price big"><%= product.price.toLocaleString() %> ₫</div>
+        <p class="desc"><%= product.desc %></p>
+
+        <div class="qty-row">
+          <label>Số lượng</label>
+          <input id="qty" type="number" min="1" value="1">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn js-add" data-id="<%= product.id %>">Thêm vào giỏ 🛒</button>
+          <button class="btn-outline js-like" data-id="<%= product.id %>">Thêm yêu thích ❤️</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+  <script>
+    // Gửi kèm số lượng khi thêm từ trang chi tiết
+    document.addEventListener('click', async (e) => {
+      const add = e.target.closest('.js-add');
+      if (add) {
+        const id = add.dataset.id;
+        const qty = Number(document.getElementById('qty').value || 1);
+        await fetch('/api/cart/add', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ id, qty })
+        });
+        location.href = '/gio-hang';
+      }
+    });
+  </script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

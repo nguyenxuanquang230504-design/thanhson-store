@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin | Thanh Sơn</title><link rel="stylesheet" href="/css/admin.css"></head>
+<body class="admin-shell">
+  <%- include('_layout', { active: 'dashboard' }) %>
+  <main class="admin-main">
+    <header class="admin-top"><div><p class="eyebrow">OVERVIEW</p><h1>Tổng quan</h1></div><a class="admin-button" href="/">Mở cửa hàng ↗</a></header>
+    <% if (error) { %><div class="notice error"><%= error %></div><% } %>
+    <% if (stats) { %>
+      <section class="stat-grid">
+        <article class="stat-card"><span>Sản phẩm đang bán</span><strong><%= stats.products %></strong></article>
+        <article class="stat-card"><span>Danh mục hiển thị</span><strong><%= stats.categories %></strong></article>
+        <article class="stat-card"><span>Đơn hàng trong MongoDB</span><strong><%= stats.orders %></strong></article>
+      </section>
+    <% } %>
+    <section class="admin-panel"><p class="eyebrow">QUICK ACTIONS</p><h2>Quản lý cửa hàng</h2><p class="muted">Tạo danh mục trước, sau đó thêm sản phẩm vào danh mục đó.</p><div class="admin-actions"><a class="admin-button primary" href="/admin/categories">Quản lý danh mục</a><a class="admin-button" href="/admin/products">Quản lý sản phẩm</a></div></section>
+  </main>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

@@ -37,7 +37,7 @@ const productSchema = new mongoose.Schema({
   subcategory: { type: String, default: '' },
   tags: { type: [String], default: [] },
   variants: { type: [variantSchema], default: [] },
-  productStatus: { type: String, enum: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'], default: 'PUBLISHED' },
+  productStatus: { type: String, enum: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED', 'INACTIVE'], default: 'PUBLISHED' },
   isFeatured: { type: Boolean, default: false },
   isNewArrival: { type: Boolean, default: false },
   seoTitle: { type: String, default: '', maxlength: 160 },

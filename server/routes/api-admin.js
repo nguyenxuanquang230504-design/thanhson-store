@@ -191,14 +191,48 @@ router.delete('/categories/:id', requireRole('SUPER_ADMIN'), asyncRoute(async (r
 router.get('/products', requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), asyncRoute(async (req, res) => {
   if (requireMongo(res)) return;
   const query = String(req.query.q || '').trim().slice(0, 100);
-  const tokens = searchTokens([query]);
   const filter = {};
-  if (req.query.status) filter.productStatus = req.query.status;
-  if (req.query.stockStatus === 'low') filter.stock = { $gt: 0, $lte: lowStockThreshold };
-  if (req.query.stockStatus === 'out') filter.stock = { $lte: 0 };
-  if (tokens.length) filter.searchTokens = { $all: tokens };
+
+  // Status Filter
+  if (req.query.status && req.query.status !== 'all') {
+    if (req.query.status === 'PUBLISHED') {
+      filter.productStatus = 'PUBLISHED';
+    } else if (req.query.status === 'DRAFT') {
+      filter.productStatus = 'DRAFT';
+    } else if (req.query.status === 'INACTIVE') {
+      filter.productStatus = { $in: ['INACTIVE', 'ARCHIVED', 'UNPUBLISHED'] };
+    } else {
+      filter.productStatus = req.query.status;
+    }
+  }
+
+  // Stock Filter
+  if (req.query.stockStatus === 'in_stock') {
+    filter.stock = { $gt: 10 };
+  } else if (req.query.stockStatus === 'low' || req.query.stockStatus === 'low_stock') {
+    filter.stock = { $gt: 0, $lte: 10 };
+  } else if (req.query.stockStatus === 'out' || req.query.stockStatus === 'out_of_stock') {
+    filter.stock = { $lte: 0 };
+  }
+
+  // Search by Name, SKU, productCode, and tokens (case & accent insensitive)
+  if (query) {
+    const tokens = searchTokens([query]);
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'i');
+    const orConditions = [
+      { name: regex },
+      { sku: regex },
+      { productCode: regex }
+    ];
+    if (tokens.length) {
+      orConditions.push({ searchTokens: { $all: tokens } });
+    }
+    filter.$or = orConditions;
+  }
+
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
-  const perPage = 20;
+  const perPage = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
   const [items, total] = await Promise.all([
     Product.find(filter).populate('category', 'name slug').sort({ updatedAt: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
     Product.countDocuments(filter)
@@ -268,7 +302,7 @@ function productBody(body) {
     sizes,
     colors,
     variants,
-    productStatus: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'].includes(body.productStatus) ? body.productStatus : 'DRAFT',
+    productStatus: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED', 'INACTIVE'].includes(body.productStatus) ? body.productStatus : 'PUBLISHED',
     isFeatured: body.isFeatured === true || body.isFeatured === 'true',
     isNewArrival: body.isNewArrival === true || body.isNewArrival === 'true',
     seoTitle: String(body.seoTitle || '').trim(),
@@ -288,6 +322,15 @@ function productBody(body) {
 router.post('/products', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
   if (requireMongo(res)) return;
   const body = productBody(req.body);
+
+  // Validate SKU uniqueness
+  if (body.sku) {
+    const existingSku = await Product.findOne({ sku: body.sku });
+    if (existingSku) {
+      return res.status(400).json({ ok: false, message: `Mã SKU "${body.sku}" đã tồn tại trên hệ thống. Vui lòng nhập mã SKU khác.` });
+    }
+  }
+
   if (body.category) {
     const category = await Category.findById(body.category).select('slug name');
     if (!category) return res.status(400).json({ ok: false, message: 'Danh mục không tồn tại.' });
@@ -302,13 +345,31 @@ router.post('/products', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (
     }
   }
   const item = await Product.create(body);
-  res.status(201).json({ ok: true, item });
+  res.status(201).json({ ok: true, item, message: 'Đã thêm sản phẩm mới thành công.' });
 }));
 
 router.put('/products/:id', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
   if (requireMongo(res)) return;
   if (!isValidId(req.params.id)) return res.status(400).json({ ok: false, message: 'ID sản phẩm không hợp lệ.' });
+  
+  const existingProduct = await Product.findById(req.params.id);
+  if (!existingProduct) return res.status(404).json({ ok: false, message: 'Không tìm thấy sản phẩm.' });
+
   const body = productBody(req.body);
+
+  // Validate SKU uniqueness across other products
+  if (body.sku) {
+    const duplicateSku = await Product.findOne({ sku: body.sku, _id: { $ne: req.params.id } });
+    if (duplicateSku) {
+      return res.status(400).json({ ok: false, message: `Mã SKU "${body.sku}" đã được sử dụng bởi sản phẩm khác.` });
+    }
+  }
+
+  // Preserve existing image if user did not provide a new one
+  if (!body.image && existingProduct.image) {
+    body.image = existingProduct.image;
+  }
+
   if (body.category) {
     const category = await Category.findById(body.category).select('slug name');
     if (!category) return res.status(400).json({ ok: false, message: 'Danh mục không tồn tại.' });
@@ -323,16 +384,89 @@ router.put('/products/:id', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(asyn
     }
   }
   const item = await Product.findByIdAndUpdate(req.params.id, { ...body, updatedAt: new Date() }, { new: true, runValidators: true });
-  if (!item) return res.status(404).json({ ok: false, message: 'Không tìm thấy sản phẩm.' });
-  res.json({ ok: true, item });
+  res.json({ ok: true, item, message: 'Đã cập nhật sản phẩm thành công.' });
 }));
 
+// Quick Direct Stock Update (Inline Editing in Table)
+router.patch('/products/:id/stock', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  if (!isValidId(req.params.id)) return res.status(400).json({ ok: false, message: 'ID sản phẩm không hợp lệ.' });
+
+  const rawStock = req.body.stock;
+  const stock = Number(rawStock);
+  if (!Number.isInteger(stock) || stock < 0) {
+    return res.status(400).json({ ok: false, message: 'Số lượng tồn kho phải là số nguyên không âm (≥ 0).' });
+  }
+
+  const product = await Product.findById(req.params.id);
+  if (!product) return res.status(404).json({ ok: false, message: 'Không tìm thấy sản phẩm.' });
+
+  // If product has variants, update variants stock proportionally
+  if (product.variants && product.variants.length > 0) {
+    const currentTotal = product.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    if (currentTotal === 0) {
+      const perVariant = Math.floor(stock / product.variants.length);
+      const rem = stock % product.variants.length;
+      product.variants.forEach((v, idx) => {
+        v.stock = perVariant + (idx === 0 ? rem : 0);
+      });
+    } else {
+      let allocated = 0;
+      product.variants.forEach((v, idx) => {
+        if (idx === product.variants.length - 1) {
+          v.stock = Math.max(0, stock - allocated);
+        } else {
+          const ratio = v.stock / currentTotal;
+          const newVarStock = Math.round(stock * ratio);
+          v.stock = newVarStock;
+          allocated += newVarStock;
+        }
+      });
+    }
+  }
+
+  product.stock = stock;
+  product.updatedAt = new Date();
+  await product.save();
+
+  res.json({
+    ok: true,
+    item: product,
+    stock: product.stock,
+    message: `Đã cập nhật tồn kho sản phẩm "${product.name}" thành ${product.stock}.`
+  });
+}));
+
+// Delete Product with Transaction Integrity Check
 router.delete('/products/:id', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
   if (requireMongo(res)) return;
   if (!isValidId(req.params.id)) return res.status(400).json({ ok: false, message: 'ID sản phẩm không hợp lệ.' });
-  const item = await Product.findByIdAndUpdate(req.params.id, { productStatus: 'ARCHIVED', updatedAt: new Date() }, { new: true });
-  if (!item) return res.status(404).json({ ok: false, message: 'Không tìm thấy sản phẩm.' });
-  res.json({ ok: true });
+
+  const product = await Product.findById(req.params.id);
+  if (!product) return res.status(404).json({ ok: false, message: 'Không tìm thấy sản phẩm.' });
+
+  // Check if product is referenced in historical orders
+  const orderCount = await Order.countDocuments({ 'items.productId': req.params.id });
+
+  if (orderCount === 0) {
+    // Safe to hard delete
+    await Product.findByIdAndDelete(req.params.id);
+    return res.json({
+      ok: true,
+      action: 'HARD_DELETE',
+      message: `Đã xóa vĩnh viễn sản phẩm "${product.name}" (SKU: ${product.sku || 'N/A'}) khỏi hệ thống.`
+    });
+  } else {
+    // Soft delete / mark as INACTIVE to protect transaction history
+    product.productStatus = 'INACTIVE';
+    product.updatedAt = new Date();
+    await product.save();
+    return res.json({
+      ok: true,
+      action: 'SOFT_DELETE',
+      message: `Sản phẩm "${product.name}" đã phát sinh ${orderCount} đơn hàng trong lịch sử. Hệ thống đã chuyển trạng thái sang "Ngừng kinh doanh" để bảo vệ lịch sử giao dịch.`
+    });
+  }
 }));
 
 router.get('/orders', requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), asyncRoute(async (req, res) => {

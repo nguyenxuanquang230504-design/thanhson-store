@@ -2,7 +2,8 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title><%= product.name %> | Thanh Sơn Fashion</title>
+  <title><%= product.seoTitle || `${product.name} | Thanh Sơn Store` %></title>
+  <meta name="description" content="<%= product.seoDescription || product.desc || product.shortDescription || 'Áo dài cách tân cao cấp Thanh Sơn Store.' %>">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/css/style.css?v=20261124">
 </head>
@@ -14,79 +15,186 @@
   <% const hasSizes = variants.some(variant => variant.size); %>
   <% const hasColors = variants.some(variant => variant.color); %>
   <% const initialStock = variants.length ? Number(availableVariant?.stock || 0) : Number(product.stock || 0); %>
-  <section class="tsf-container detail">
-    <div class="detail-grid">
-      <div class="detail-image">
-        <img src="<%= product.image %>" alt="<%= product.name %>">
-      </div>
-      <div class="detail-info">
-        <h1><%= product.name %></h1>
-        <div class="price big"><%= product.price.toLocaleString() %> ₫</div>
-        <p class="desc"><%= product.desc %></p>
 
-        <div class="purchase-panel" data-product-id="<%= product.id %>" data-low-stock="<%= lowStockThreshold %>" data-very-low-stock="<%= veryLowStockThreshold %>">
-          <% if (hasSizes || hasColors) { %>
-            <div class="variant-fields">
-              <% if (hasSizes) { %>
-                <label for="productSize">Kích cỡ
-                  <select id="productSize">
-                    <% [...new Set(variants.map(variant => variant.size).filter(Boolean))].forEach(size => { %>
-                      <option value="<%= size %>" <%= availableVariant?.size===size?'selected':'' %>><%= size %></option>
-                    <% }) %>
-                  </select>
-                </label>
-              <% } %>
-              <% if (hasColors) { %>
-                <label for="productColor">Màu sắc
-                  <select id="productColor">
-                    <% [...new Set(variants.map(variant => variant.color).filter(Boolean))].forEach(color => { %>
-                      <option value="<%= color %>" <%= availableVariant?.color===color?'selected':'' %>><%= color %></option>
-                    <% }) %>
-                  </select>
-                </label>
-              <% } %>
-              <% if (!hasSizes && !hasColors && variants.length > 1) { %>
-                <label for="productVariant">Phân loại
-                  <select id="productVariant">
-                    <% variants.forEach(variant => { %>
-                      <option value="<%= variant._id %>" <%= String(availableVariant?._id)===String(variant._id)?'selected':'' %>><%= variant.sku || 'Phân loại' %></option>
-                    <% }) %>
-                  </select>
-                </label>
-              <% } %>
-              <input id="selectedVariantId" type="hidden" value="<%= availableVariant?._id || '' %>">
+  <main class="product-detail-page">
+    <section class="tsf-container breadcrumb-container">
+      <nav class="breadcrumb" aria-label="Đường dẫn">
+        <a href="/">Trang chủ</a>
+        <span>/</span>
+        <a href="/san-pham">Áo dài cách tân</a>
+        <span>/</span>
+        <span aria-current="page"><%= product.name %></span>
+      </nav>
+    </section>
+
+    <section class="tsf-container detail">
+      <div class="detail-grid">
+        <!-- Product Images & Gallery -->
+        <div class="detail-image-column">
+          <div class="detail-image-main">
+            <img id="mainProductImage" src="<%= product.image %>" alt="<%= product.name %>">
+            <% if (product.originalPrice && product.originalPrice > product.price) { %>
+              <span class="detail-sale-badge">GIẢM <%= Math.round((1 - product.price / product.originalPrice) * 100) %>%</span>
+            <% } %>
+          </div>
+          <% if (Array.isArray(product.images) && product.images.length > 1) { %>
+            <div class="detail-gallery-thumbs">
+              <% product.images.forEach((imgUrl, idx) => { %>
+                <button type="button" class="gallery-thumb <%= idx === 0 ? 'active' : '' %>" data-src="<%= imgUrl %>" aria-label="Xem ảnh <%= idx + 1 %>">
+                  <img src="<%= imgUrl %>" alt="" loading="lazy">
+                </button>
+              <% }) %>
             </div>
-          <% } else if (variants.length) { %>
-            <% if (variants.length === 1) { %><input id="selectedVariantId" type="hidden" value="<%= availableVariant?._id || '' %>"><% } %>
           <% } %>
+        </div>
 
-          <p id="inventoryStatus" class="inventory-status" role="status" aria-live="polite"></p>
-          <div class="qty-row">
-            <label for="qty">Số lượng</label>
-            <div class="qty-stepper">
-              <button type="button" class="qty-step" data-quantity-step="-1" aria-label="Giảm số lượng" disabled>−</button>
-              <input id="qty" type="number" inputmode="numeric" min="<%= initialStock > 0 ? 1 : 0 %>" max="<%= initialStock %>" step="1" value="<%= initialStock > 0 ? 1 : 0 %>" aria-describedby="inventoryStatus" <%= initialStock > 0 ? '' : 'disabled' %>>
-              <button type="button" class="qty-step" data-quantity-step="1" aria-label="Tăng số lượng" <%= initialStock > 1 ? '' : 'disabled' %>>+</button>
+        <!-- Product Purchasing Info -->
+        <div class="detail-info">
+          <div class="detail-header-meta">
+            <span class="detail-category-badge">ÁO DÀI CÁCH TÂN</span>
+            <% if (product.sku) { %><span class="detail-sku">Mã: <strong><%= product.sku %></strong></span><% } %>
+          </div>
+
+          <h1 class="detail-title"><%= product.name %></h1>
+
+          <!-- Price Row -->
+          <div class="detail-price-box">
+            <div class="price big"><%= Number(product.price).toLocaleString('vi-VN') %> ₫</div>
+            <% if (product.originalPrice && product.originalPrice > product.price) { %>
+              <del class="original-price"><%= Number(product.originalPrice).toLocaleString('vi-VN') %> ₫</del>
+              <span class="save-amount">Tiết kiệm <%= (product.originalPrice - product.price).toLocaleString('vi-VN') %> ₫</span>
+            <% } %>
+          </div>
+
+          <!-- Product Attributes -->
+          <div class="detail-attributes-card">
+            <div class="attr-item">
+              <span class="attr-label">Chất liệu:</span>
+              <strong class="attr-val"><%= product.material || 'Lụa tơ tằm thượng hạng' %></strong>
+            </div>
+            <% if (product.designStyle) { %>
+              <div class="attr-item">
+                <span class="attr-label">Kiểu dáng:</span>
+                <strong class="attr-val"><%= product.designStyle %></strong>
+              </div>
+            <% } %>
+            <% if (product.colors && product.colors.length) { %>
+              <div class="attr-item">
+                <span class="attr-label">Màu chủ đạo:</span>
+                <strong class="attr-val"><%= product.colors.join(', ') %></strong>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Purchase Controls Panel -->
+          <div class="purchase-panel" data-product-id="<%= product.id %>" data-low-stock="<%= lowStockThreshold %>" data-very-low-stock="<%= veryLowStockThreshold %>">
+            <% if (hasSizes || hasColors) { %>
+              <div class="variant-fields">
+                <% if (hasSizes) { %>
+                  <div class="variant-group">
+                    <label for="productSize">Kích cỡ áo:</label>
+                    <select id="productSize" class="variant-select">
+                      <% [...new Set(variants.map(variant => variant.size).filter(Boolean))].forEach(size => { %>
+                        <option value="<%= size %>" <%= availableVariant?.size===size?'selected':'' %>>Cỡ <%= size %></option>
+                      <% }) %>
+                    </select>
+                  </div>
+                <% } %>
+                <% if (hasColors) { %>
+                  <div class="variant-group">
+                    <label for="productColor">Màu sắc:</label>
+                    <select id="productColor" class="variant-select">
+                      <% [...new Set(variants.map(variant => variant.color).filter(Boolean))].forEach(color => { %>
+                        <option value="<%= color %>" <%= availableVariant?.color===color?'selected':'' %>><%= color %></option>
+                      <% }) %>
+                    </select>
+                  </div>
+                <% } %>
+                <% if (!hasSizes && !hasColors && variants.length > 1) { %>
+                  <div class="variant-group">
+                    <label for="productVariant">Phân loại:</label>
+                    <select id="productVariant" class="variant-select">
+                      <% variants.forEach(variant => { %>
+                        <option value="<%= variant._id %>" <%= String(availableVariant?._id)===String(variant._id)?'selected':'' %>><%= variant.sku || 'Phân loại' %></option>
+                      <% }) %>
+                    </select>
+                  </div>
+                <% } %>
+                <input id="selectedVariantId" type="hidden" value="<%= availableVariant?._id || '' %>">
+              </div>
+            <% } else if (variants.length === 1) { %>
+              <input id="selectedVariantId" type="hidden" value="<%= availableVariant?._id || '' %>">
+            <% } %>
+
+            <!-- Live Stock Status Badge -->
+            <div class="stock-status-wrapper">
+              <span class="stock-label-title">Tình trạng kho:</span>
+              <p id="inventoryStatus" class="inventory-status" role="status" aria-live="polite"></p>
+            </div>
+
+            <!-- Stepper: [-] [ 1 ] [+] -->
+            <div class="qty-row">
+              <label for="qty">Số lượng mua:</label>
+              <div class="qty-stepper" aria-label="Bộ chọn số lượng">
+                <button type="button" class="qty-step" data-quantity-step="-1" aria-label="Giảm số lượng" disabled>−</button>
+                <input id="qty" type="number" inputmode="numeric" min="<%= initialStock > 0 ? 1 : 0 %>" max="<%= initialStock %>" step="1" value="<%= initialStock > 0 ? 1 : 0 %>" aria-describedby="inventoryStatus" <%= initialStock > 0 ? '' : 'disabled' %>>
+                <button type="button" class="qty-step" data-quantity-step="1" aria-label="Tăng số lượng" <%= initialStock > 1 ? '' : 'disabled' %>>+</button>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-row purchase-actions">
+              <button type="button" class="btn js-add purchase-add" data-id="<%= product.id %>" <%= initialStock > 0 ? '' : 'disabled' %>>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h2l2 11h10l2-8H7"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>
+                <span>Thêm vào giỏ hàng</span>
+              </button>
+              <button type="button" class="btn-outline js-like purchase-wishlist <%= isWishlisted ? 'is-active' : '' %>" data-id="<%= product.id %>" aria-pressed="<%= isWishlisted %>">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.2-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.7a4.7 4.7 0 0 1 8.8-2.2 4.7 4.7 0 0 1 8.8 2.2Z"></path></svg>
+                <span><%= isWishlisted ? 'Đã yêu thích' : 'Thêm yêu thích' %></span>
+              </button>
             </div>
           </div>
-          <div class="btn-row purchase-actions">
-            <button type="button" class="btn js-add purchase-add" data-id="<%= product.id %>" <%= initialStock > 0 ? '' : 'disabled' %>>
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h2l2 11h10l2-8H7"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>
-              <span>Thêm vào giỏ hàng</span>
-            </button>
-            <button type="button" class="btn-outline js-like purchase-wishlist <%= isWishlisted ? 'is-active' : '' %>" data-id="<%= product.id %>" aria-pressed="<%= isWishlisted %>">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.2-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.7a4.7 4.7 0 0 1 8.8-2.2 4.7 4.7 0 0 1 8.8 2.2Z"></path></svg>
-              <span><%= isWishlisted ? 'Đã yêu thích' : 'Thêm yêu thích' %></span>
-            </button>
+
+          <!-- Customer Service Guarantees -->
+          <div class="store-guarantees">
+            <div class="guarantee-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              <span>Cam kết chất lượng may đo chuẩn form Thanh Sơn</span>
+            </div>
+            <div class="guarantee-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              <span>Miễn phí vận chuyển cho đơn hàng từ 500.000₫</span>
+            </div>
+            <div class="guarantee-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              <span>Đổi size linh hoạt trong 7 ngày nếu không vừa</span>
+            </div>
+          </div>
+
+          <!-- Descriptions -->
+          <div class="detail-description-block">
+            <h3>Mô tả sản phẩm</h3>
+            <p class="desc"><%= product.description || product.desc || product.shortDescription %></p>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </main>
 
   <%- include('partials/footer') %>
   <script>window.tsfProductVariants = <%- JSON.stringify(variants).replace(/</g, '\\u003c') %>;</script>
   <script src="/js/product-detail.js"></script>
   <script src="/js/main.js"></script>
+  <script>
+    // Gallery thumbnails click
+    document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+        const mainImg = document.getElementById('mainProductImage');
+        if (mainImg && thumb.dataset.src) mainImg.src = thumb.dataset.src;
+      });
+    });
+  </script>
 </body>
 </html>

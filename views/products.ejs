@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>Sản phẩm | Thanh Sơn Fashion</title>
+  <title><%= searchMode ? 'Tìm kiếm' : 'Tất cả Áo Dài Cách Tân' %> | Thanh Sơn Store</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/css/style.css?v=20261124">
 </head>
@@ -14,119 +14,227 @@
   <% const selectedMax = maxPrice === '' ? sliderMax : Math.min(Math.max(Number(maxPrice), selectedMin), sliderMax); %>
 
   <main class="catalog-page">
-  <section class="catalog-heading tsf-container">
-    <nav class="breadcrumb" aria-label="Đường dẫn"><a href="/">Trang chủ</a><span>/</span><span>Sản phẩm</span></nav>
-    <div class="catalog-title-row">
-      <div>
-        <p class="eyebrow">THANH SƠN FASHION</p>
-        <h1><%= category ? ({woman:'Thời trang Woman',man:'Thời trang Man',kids:'Thời trang Kids'}[category] || 'Sản phẩm') : (searchMode ? 'Kết quả tìm kiếm' : 'Tất cả sản phẩm') %></h1>
-      </div>
-      <span class="product-count"><%= pagination ? pagination.total : products.length %> sản phẩm</span>
-    </div>
-  </section>
-
-  <section class="tsf-container catalog-layout">
-    <aside class="filter-sidebar">
-      <form id="catalogFilters" action="<%= searchMode ? '/tim-kiem' : '/san-pham' %>" method="get">
-        <% if (query) { %><input type="hidden" name="q" value="<%= query %>"><% } %>
-        <div class="filter-head"><strong>Bộ lọc</strong><a href="<%= clearAllHref %>">Xóa tất cả</a></div>
-        <fieldset><legend>Danh mục</legend>
-          <label><input type="radio" name="category" value="" <%= !category ? 'checked' : '' %>> Tất cả</label>
-          <label><input type="radio" name="category" value="woman" <%= category==='woman'?'checked':'' %>> Woman</label>
-          <label><input type="radio" name="category" value="man" <%= category==='man'?'checked':'' %>> Man</label>
-          <label><input type="radio" name="category" value="kids" <%= category==='kids'?'checked':'' %>> Kids</label>
-        </fieldset>
-        <input type="hidden" name="sort" value="<%= sort %>">
-        <input type="hidden" name="size" value="<%= size %>">
-        <input type="hidden" name="color" value="<%= color %>">
-        <input type="hidden" name="material" value="<%= material %>">
-        <input type="hidden" name="brand" value="<%= brand %>">
-        <input type="hidden" name="availableOnly" value="<%= availableOnly %>">
-        <fieldset class="price-filter">
-          <legend>Khoảng giá</legend>
-          <p id="activePriceRange" class="active-price-range" <%= minPrice || maxPrice ? '' : 'hidden' %>>Đang lọc: <%= Number(minPrice || 0).toLocaleString('vi-VN') %> ₫ – <%= Number(maxPrice || priceBounds.max).toLocaleString('vi-VN') %> ₫</p>
-          <div class="price-fields">
-            <label for="minPrice">Từ
-              <span class="currency-input"><input id="minPrice" name="minPrice" type="text" inputmode="numeric" autocomplete="off" value="<%= minPrice ? Number(minPrice).toLocaleString('vi-VN') : '' %>" placeholder="0" aria-describedby="priceRangeError"><span>₫</span></span>
-            </label>
-            <label for="maxPrice">Đến
-              <span class="currency-input"><input id="maxPrice" name="maxPrice" type="text" inputmode="numeric" autocomplete="off" value="<%= maxPrice ? Number(maxPrice).toLocaleString('vi-VN') : '' %>" placeholder="<%= Number(priceBounds.max).toLocaleString('vi-VN') %>" aria-describedby="priceRangeError"><span>₫</span></span>
-            </label>
-          </div>
-          <div class="price-range-widget" data-max="<%= sliderMax %>" data-step="<%= priceBounds.step %>" aria-label="Chọn khoảng giá">
-            <div class="price-range-track"><span class="price-range-fill"></span></div>
-            <input id="minPriceRange" class="price-range-input min-range" type="range" min="0" max="<%= sliderMax %>" step="<%= priceBounds.step %>" value="<%= selectedMin %>" aria-label="Giá thấp nhất" aria-describedby="priceRangeError">
-            <input id="maxPriceRange" class="price-range-input max-range" type="range" min="0" max="<%= sliderMax %>" step="<%= priceBounds.step %>" value="<%= selectedMax %>" aria-label="Giá cao nhất" aria-describedby="priceRangeError">
-          </div>
-          <div class="price-range-boundaries"><span>0 ₫</span><span><%= Number(priceBounds.max).toLocaleString('vi-VN') %> ₫</span></div>
-          <p id="priceRangeError" class="price-range-error" role="status" aria-live="polite"><%= priceFilterError %></p>
-          <div class="price-filter-actions">
-            <button class="btn filter-submit" type="submit">Áp dụng</button>
-            <a href="<%= clearPriceHref %>">Xóa giá</a>
-          </div>
-        </fieldset>
-      </form>
-    </aside>
-
-    <div class="catalog-results">
-      <div class="catalog-toolbar">
-        <button class="filter-toggle" type="button" aria-expanded="false">Bộ lọc</button>
-        <form action="<%= searchMode ? '/tim-kiem' : '/san-pham' %>" method="get">
-          <% if (category) { %><input type="hidden" name="category" value="<%= category %>"><% } %>
-          <% if (query) { %><input type="hidden" name="q" value="<%= query %>"><% } %>
-          <% if (minPrice) { %><input type="hidden" name="minPrice" value="<%= minPrice %>"><% } %>
-          <% if (maxPrice) { %><input type="hidden" name="maxPrice" value="<%= maxPrice %>"><% } %>
-          <% if (size) { %><input type="hidden" name="size" value="<%= size %>"><% } %>
-          <% if (color) { %><input type="hidden" name="color" value="<%= color %>"><% } %>
-          <% if (material) { %><input type="hidden" name="material" value="<%= material %>"><% } %>
-          <% if (brand) { %><input type="hidden" name="brand" value="<%= brand %>"><% } %>
-          <% if (availableOnly) { %><input type="hidden" name="availableOnly" value="<%= availableOnly %>"><% } %>
-          <label for="sort">Sắp xếp:</label>
-          <select id="sort" name="sort" onchange="this.form.submit()">
-            <option value="newest" <%= sort==='newest'?'selected':'' %>>Mới nhất</option>
-            <option value="price-asc" <%= sort==='price-asc'?'selected':'' %>>Giá thấp đến cao</option>
-            <option value="price-desc" <%= sort==='price-desc'?'selected':'' %>>Giá cao đến thấp</option>
-            <option value="name" <%= sort==='name'?'selected':'' %>>Tên A-Z</option>
-          </select>
-        </form>
-      </div>
-
-    <% if (searchMode) { %>
-      <form class="search-page-form" action="/tim-kiem" method="get" role="search">
-        <input type="search" name="q" value="<%= query %>" placeholder="Tìm theo tên, mã hoặc danh mục" aria-label="Tìm sản phẩm">
-        <% if (category) { %><input type="hidden" name="category" value="<%= category %>"><% } %>
-        <% if (sort) { %><input type="hidden" name="sort" value="<%= sort %>"><% } %>
-        <% if (minPrice) { %><input type="hidden" name="minPrice" value="<%= minPrice %>"><% } %>
-        <% if (maxPrice) { %><input type="hidden" name="maxPrice" value="<%= maxPrice %>"><% } %>
-        <button class="btn" type="submit">Tìm kiếm</button>
-      </form>
-    <% } %>
-
-    <% if (!products.length) { %>
-      <div class="empty-state"><strong>Không tìm thấy sản phẩm phù hợp</strong><p>Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p><a class="btn" href="/san-pham">Xem tất cả</a></div>
-    <% } %>
-
-    <div class="product-grid">
-      <% products.forEach(p => { %>
-        <article class="product-card">
-          <a class="img-wrap" href="/san-pham/<%= p.id %>"><img src="<%= p.image %>" alt="<%= p.name %>" loading="lazy" width="360" height="480"><span class="product-badge">NEW</span></a>
-          <div class="product-info">
-            <a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a>
-            <div class="price"><%= p.price.toLocaleString() %> ₫</div>
-            <div class="card-actions"><button type="button" class="btn-icon js-like" data-id="<%= p.id %>" aria-label="Yêu thích">♡</button><button type="button" class="btn quick-add js-add" data-id="<%= p.id %>" data-requires-variant="<%= Array.isArray(p.variants) && p.variants.length ? 'true' : 'false' %>"><%= Array.isArray(p.variants) && p.variants.length ? 'Chọn phân loại' : 'Thêm vào giỏ' %></button></div>
-          </div>
-        </article>
-      <% }) %>
-    </div>
-    <% if (pagination && pagination.totalPages > 1) { %>
-      <nav class="pagination" aria-label="Phân trang">
-        <% for (let pageNumber = 1; pageNumber <= pagination.totalPages; pageNumber++) { %>
-          <a class="<%= pagination.page===pageNumber?'active':'' %>" href="?<%= filterQuery %><%= filterQuery ? '&' : '' %>page=<%= pageNumber %>"><%= pageNumber %></a>
-        <% } %>
+    <section class="catalog-heading tsf-container">
+      <nav class="breadcrumb" aria-label="Đường dẫn">
+        <a href="/">Trang chủ</a><span>/</span><span>Áo dài cách tân</span>
       </nav>
-    <% } %>
-    </div>
-  </section>
+      <div class="catalog-title-row">
+        <div>
+          <p class="eyebrow">THANH SƠN STORE — BỘ SƯU TẬP</p>
+          <h1><%= searchMode ? `Kết quả tìm kiếm cho "${query}"` : 'Tất cả Áo Dài Cách Tân' %></h1>
+        </div>
+        <span class="product-count"><%= pagination ? pagination.total : products.length %> mẫu áo dài</span>
+      </div>
+    </section>
+
+    <section class="tsf-container catalog-layout">
+      <!-- Filter Sidebar -->
+      <aside class="filter-sidebar">
+        <form id="catalogFilters" action="<%= searchMode ? '/tim-kiem' : '/san-pham' %>" method="get">
+          <% if (query) { %><input type="hidden" name="q" value="<%= query %>"><% } %>
+          <input type="hidden" name="sort" value="<%= sort %>">
+          <% if (typeof collection !== 'undefined' && collection) { %><input type="hidden" name="collection" value="<%= collection %>"><% } %>
+          <% if (typeof sale !== 'undefined' && sale) { %><input type="hidden" name="sale" value="<%= sale %>"><% } %>
+
+          <div class="filter-head">
+            <strong>Bộ lọc tìm kiếm</strong>
+            <a href="<%= clearAllHref %>">Xóa tất cả</a>
+          </div>
+
+          <!-- Price Range Filter with Dual Slider & Manual Inputs -->
+          <fieldset class="price-filter">
+            <legend>Khoảng giá (VNĐ)</legend>
+            <p id="activePriceRange" class="active-price-range" <%= minPrice || maxPrice ? '' : 'hidden' %>>
+              Đang lọc: <%= Number(minPrice || 0).toLocaleString('vi-VN') %> ₫ – <%= Number(maxPrice || priceBounds.max).toLocaleString('vi-VN') %> ₫
+            </p>
+            <div class="price-fields">
+              <label for="minPrice">Từ
+                <span class="currency-input">
+                  <input id="minPrice" name="minPrice" type="text" inputmode="numeric" autocomplete="off" value="<%= minPrice ? Number(minPrice).toLocaleString('vi-VN') : '' %>" placeholder="0" aria-describedby="priceRangeError">
+                  <span>₫</span>
+                </span>
+              </label>
+              <label for="maxPrice">Đến
+                <span class="currency-input">
+                  <input id="maxPrice" name="maxPrice" type="text" inputmode="numeric" autocomplete="off" value="<%= maxPrice ? Number(maxPrice).toLocaleString('vi-VN') : '' %>" placeholder="<%= Number(priceBounds.max).toLocaleString('vi-VN') %>" aria-describedby="priceRangeError">
+                  <span>₫</span>
+                </span>
+              </label>
+            </div>
+            <div class="price-range-widget" data-max="<%= sliderMax %>" data-step="<%= priceBounds.step %>" aria-label="Chọn khoảng giá">
+              <div class="price-range-track"><span class="price-range-fill"></span></div>
+              <input id="minPriceRange" class="price-range-input min-range" type="range" min="0" max="<%= sliderMax %>" step="<%= priceBounds.step %>" value="<%= selectedMin %>" aria-label="Giá thấp nhất" aria-describedby="priceRangeError">
+              <input id="maxPriceRange" class="price-range-input max-range" type="range" min="0" max="<%= sliderMax %>" step="<%= priceBounds.step %>" value="<%= selectedMax %>" aria-label="Giá cao nhất" aria-describedby="priceRangeError">
+            </div>
+            <div class="price-range-boundaries">
+              <span>0 ₫</span>
+              <span><%= Number(priceBounds.max).toLocaleString('vi-VN') %> ₫</span>
+            </div>
+            <p id="priceRangeError" class="price-range-error" role="status" aria-live="polite"><%= priceFilterError %></p>
+            <div class="price-filter-actions">
+              <button class="btn filter-submit" type="submit">Áp dụng giá</button>
+              <a href="<%= clearPriceHref %>">Bỏ lọc giá</a>
+            </div>
+          </fieldset>
+
+          <!-- Material Filter -->
+          <fieldset class="attr-filter">
+            <legend>Chất liệu</legend>
+            <div class="filter-options-grid">
+              <label><input type="radio" name="material" value="" <%= !material ? 'checked' : '' %> onchange="this.form.submit()"> Tất cả</label>
+              <label><input type="radio" name="material" value="Lụa Tơ Tằm" <%= material==='Lụa Tơ Tằm'?'checked':'' %> onchange="this.form.submit()"> Lụa Tơ Tằm</label>
+              <label><input type="radio" name="material" value="Gấm" <%= material==='Gấm'?'checked':'' %> onchange="this.form.submit()"> Gấm</label>
+              <label><input type="radio" name="material" value="Nhung Then" <%= material==='Nhung Then'?'checked':'' %> onchange="this.form.submit()"> Nhung Then</label>
+              <label><input type="radio" name="material" value="Chiffon Lụa" <%= material==='Chiffon Lụa'?'checked':'' %> onchange="this.form.submit()"> Chiffon Lụa</label>
+              <label><input type="radio" name="material" value="Lụa Satin" <%= material==='Lụa Satin'?'checked':'' %> onchange="this.form.submit()"> Lụa Satin</label>
+            </div>
+          </fieldset>
+
+          <!-- Design Style Filter -->
+          <fieldset class="attr-filter">
+            <legend>Kiểu dáng thiết kế</legend>
+            <div class="filter-options-grid">
+              <label><input type="radio" name="designStyle" value="" <%= !designStyle ? 'checked' : '' %> onchange="this.form.submit()"> Tất cả kiểu dáng</label>
+              <label><input type="radio" name="designStyle" value="Dáng suông trẻ trung" <%= designStyle==='Dáng suông trẻ trung'?'checked':'' %> onchange="this.form.submit()"> Dáng suông</label>
+              <label><input type="radio" name="designStyle" value="Tay lỡ thanh lịch" <%= designStyle==='Tay lỡ thanh lịch'?'checked':'' %> onchange="this.form.submit()"> Tay lỡ</label>
+              <label><input type="radio" name="designStyle" value="Tay bồng hiện đại" <%= designStyle==='Tay bồng hiện đại'?'checked':'' %> onchange="this.form.submit()"> Tay bồng</label>
+              <label><input type="radio" name="designStyle" value="Tà kép sang trọng" <%= designStyle==='Tà kép sang trọng'?'checked':'' %> onchange="this.form.submit()"> Tà kép</label>
+              <label><input type="radio" name="designStyle" value="Cổ vuông cách điệu" <%= designStyle==='Cổ vuông cách điệu'?'checked':'' %> onchange="this.form.submit()"> Cổ vuông</label>
+            </div>
+          </fieldset>
+
+          <!-- Size Filter -->
+          <fieldset class="attr-filter">
+            <legend>Kích cỡ (Size)</legend>
+            <div class="filter-pills-row">
+              <label class="pill-filter <%= !size ? 'active' : '' %>">
+                <input type="radio" name="size" value="" <%= !size ? 'checked' : '' %> onchange="this.form.submit()"> Tất cả
+              </label>
+              <% ['S', 'M', 'L', 'XL'].forEach(s => { %>
+                <label class="pill-filter <%= size === s ? 'active' : '' %>">
+                  <input type="radio" name="size" value="<%= s %>" <%= size === s ? 'checked' : '' %> onchange="this.form.submit()"> <%= s %>
+                </label>
+              <% }) %>
+            </div>
+          </fieldset>
+
+          <!-- Color Filter -->
+          <fieldset class="attr-filter">
+            <legend>Màu sắc</legend>
+            <div class="filter-options-grid">
+              <label><input type="radio" name="color" value="" <%= !color ? 'checked' : '' %> onchange="this.form.submit()"> Tất cả màu</label>
+              <label><input type="radio" name="color" value="Hồng phấn" <%= color==='Hồng phấn'?'checked':'' %> onchange="this.form.submit()"> Hồng phấn</label>
+              <label><input type="radio" name="color" value="Trắng ngọc" <%= color==='Trắng ngọc'?'checked':'' %> onchange="this.form.submit()"> Trắng ngọc</label>
+              <label><input type="radio" name="color" value="Đỏ tươi" <%= color==='Đỏ tươi'?'checked':'' %> onchange="this.form.submit()"> Đỏ tươi</label>
+              <label><input type="radio" name="color" value="Đỏ rượu" <%= color==='Đỏ rượu'?'checked':'' %> onchange="this.form.submit()"> Đỏ rượu</label>
+              <label><input type="radio" name="color" value="Vàng hoàng yến" <%= color==='Vàng hoàng yến'?'checked':'' %> onchange="this.form.submit()"> Vàng hoàng yến</label>
+              <label><input type="radio" name="color" value="Xanh ngọc" <%= color==='Xanh ngọc'?'checked':'' %> onchange="this.form.submit()"> Xanh ngọc</label>
+            </div>
+          </fieldset>
+
+          <!-- Availability Filter -->
+          <fieldset class="attr-filter">
+            <legend>Tình trạng kho hàng</legend>
+            <label class="checkbox-label">
+              <input type="checkbox" name="availableOnly" value="true" <%= availableOnly==='true'?'checked':'' %> onchange="this.form.submit()">
+              <span>Chỉ hiển thị sản phẩm còn hàng</span>
+            </label>
+          </fieldset>
+        </form>
+      </aside>
+
+      <!-- Products Grid & Results -->
+      <div class="catalog-results">
+        <div class="catalog-toolbar">
+          <button class="filter-toggle" type="button" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+            Bộ lọc
+          </button>
+          <form action="<%= searchMode ? '/tim-kiem' : '/san-pham' %>" method="get">
+            <% if (query) { %><input type="hidden" name="q" value="<%= query %>"><% } %>
+            <% if (minPrice) { %><input type="hidden" name="minPrice" value="<%= minPrice %>"><% } %>
+            <% if (maxPrice) { %><input type="hidden" name="maxPrice" value="<%= maxPrice %>"><% } %>
+            <% if (size) { %><input type="hidden" name="size" value="<%= size %>"><% } %>
+            <% if (color) { %><input type="hidden" name="color" value="<%= color %>"><% } %>
+            <% if (material) { %><input type="hidden" name="material" value="<%= material %>"><% } %>
+            <% if (designStyle) { %><input type="hidden" name="designStyle" value="<%= designStyle %>"><% } %>
+            <% if (availableOnly) { %><input type="hidden" name="availableOnly" value="<%= availableOnly %>"><% } %>
+            <% if (typeof collection !== 'undefined' && collection) { %><input type="hidden" name="collection" value="<%= collection %>"><% } %>
+            <% if (typeof sale !== 'undefined' && sale) { %><input type="hidden" name="sale" value="<%= sale %>"><% } %>
+
+            <label for="sort">Sắp xếp:</label>
+            <select id="sort" name="sort" onchange="this.form.submit()">
+              <option value="newest" <%= sort==='newest'?'selected':'' %>>Mới nhất</option>
+              <option value="price-asc" <%= sort==='price-asc'?'selected':'' %>>Giá thấp đến cao</option>
+              <option value="price-desc" <%= sort==='price-desc'?'selected':'' %>>Giá cao đến thấp</option>
+              <option value="name" <%= sort==='name'?'selected':'' %>>Tên A-Z</option>
+            </select>
+          </form>
+        </div>
+
+        <% if (searchMode) { %>
+          <form class="search-page-form" action="/tim-kiem" method="get" role="search">
+            <input type="search" name="q" value="<%= query %>" placeholder="Tìm theo tên áo dài, SKU hoặc chất liệu..." aria-label="Tìm kiếm áo dài">
+            <% if (sort) { %><input type="hidden" name="sort" value="<%= sort %>"><% } %>
+            <% if (minPrice) { %><input type="hidden" name="minPrice" value="<%= minPrice %>"><% } %>
+            <% if (maxPrice) { %><input type="hidden" name="maxPrice" value="<%= maxPrice %>"><% } %>
+            <button class="btn" type="submit">Tìm kiếm</button>
+          </form>
+        <% } %>
+
+        <% if (!products.length) { %>
+          <div class="empty-state">
+            <strong>Không tìm thấy mẫu áo dài phù hợp</strong>
+            <p>Hãy thử xóa bớt bộ lọc hoặc tìm kiếm với từ khóa khác.</p>
+            <a class="btn" href="/san-pham">Xem tất cả áo dài</a>
+          </div>
+        <% } %>
+
+        <div class="product-grid">
+          <% products.forEach(p => { %>
+            <article class="product-card">
+              <a class="img-wrap" href="/san-pham/<%= p.id %>" aria-label="<%= p.name %>">
+                <img src="<%= p.image %>" alt="<%= p.name %>" loading="lazy" width="360" height="480">
+                <% if (p.salePrice && p.salePrice < p.originalPrice) { %>
+                  <span class="product-badge sale-badge">GIẢM <%= Math.round((1 - p.salePrice / p.originalPrice) * 100) %>%</span>
+                <% } else if (p.isFeatured) { %>
+                  <span class="product-badge">HOT</span>
+                <% } else if (p.isNewArrival) { %>
+                  <span class="product-badge new-badge">NEW</span>
+                <% } %>
+              </a>
+              <div class="product-info">
+                <div class="product-attr-row">
+                  <span class="product-attr-tag"><%= p.material || 'Lụa cao cấp' %></span>
+                  <% if (p.designStyle) { %><span class="product-attr-tag style-tag"><%= p.designStyle %></span><% } %>
+                </div>
+                <a class="name" href="/san-pham/<%= p.id %>"><%= p.name %></a>
+                <div class="price-row">
+                  <span class="price"><%= Number(p.price).toLocaleString('vi-VN') %> ₫</span>
+                  <% if (p.originalPrice && p.originalPrice > p.price) { %>
+                    <del class="original-price"><%= Number(p.originalPrice).toLocaleString('vi-VN') %> ₫</del>
+                  <% } %>
+                </div>
+                <div class="card-actions">
+                  <button type="button" class="btn-icon js-like" data-id="<%= p.id %>" aria-label="Yêu thích">♡</button>
+                  <button type="button" class="btn quick-add js-add" data-id="<%= p.id %>" data-requires-variant="<%= Array.isArray(p.variants) && p.variants.length ? 'true' : 'false' %>">
+                    <%= Array.isArray(p.variants) && p.variants.length ? 'Chọn size / màu' : 'Thêm vào giỏ' %>
+                  </button>
+                </div>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+
+        <% if (pagination && pagination.totalPages > 1) { %>
+          <nav class="pagination" aria-label="Phân trang">
+            <% for (let pageNumber = 1; pageNumber <= pagination.totalPages; pageNumber++) { %>
+              <a class="<%= pagination.page===pageNumber?'active':'' %>" href="?<%= filterQuery %><%= filterQuery ? '&' : '' %>page=<%= pageNumber %>"><%= pageNumber %></a>
+            <% } %>
+          </nav>
+        <% } %>
+      </div>
+    </section>
   </main>
 
   <%- include('partials/footer') %>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Khách hàng | Admin Thanh Sơn</title>
+  <link rel="stylesheet" href="/css/admin.css?v=20261124">
+</head>
+<body class="admin-shell">
+  <%- include('_layout', { active: 'customers' }) %>
+  <main class="admin-main">
+    <header class="admin-top">
+      <div>
+        <p class="eyebrow">CRM & KHÁCH HÀNG</p>
+        <h1>Quản lý khách hàng</h1>
+        <p class="muted">Xem hồ sơ, số điện thoại, địa chỉ nhận hàng, lịch sử chi tiêu và quản lý tài khoản.</p>
+      </div>
+    </header>
+
+    <p id="customerNotice" class="notice" role="status" hidden></p>
+
+    <section class="admin-panel">
+      <div class="table-heading">
+        <h2>Danh sách khách hàng</h2>
+        <div class="product-list-filters">
+          <select id="statusFilter" aria-label="Lọc theo trạng thái">
+            <option value="">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang hoạt động</option>
+            <option value="LOCKED">Đã khóa</option>
+          </select>
+          <input id="customerSearch" type="search" placeholder="Tìm tên, SĐT, email...">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Khách hàng</th>
+              <th>Số điện thoại</th>
+              <th>Email</th>
+              <th>Địa chỉ giao hàng</th>
+              <th>Đơn hàng</th>
+              <th>Tổng chi tiêu</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="customerRows">
+            <tr><td colspan="8">Đang tải danh sách khách hàng...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/admin.js"></script>
+  <script>
+    (() => {
+      const rows = document.getElementById('customerRows');
+      const notice = document.getElementById('customerNotice');
+      const searchInput = document.getElementById('customerSearch');
+      const statusFilter = document.getElementById('statusFilter');
+      let customers = [];
+
+      function showNotice(text, isError = false) {
+        notice.hidden = false;
+        notice.textContent = text;
+        notice.className = `notice${isError ? ' error' : ''}`;
+        setTimeout(() => { notice.hidden = true; }, 4000);
+      }
+
+      function render(items) {
+        rows.replaceChildren();
+        if (!items || !items.length) {
+          rows.innerHTML = '<tr><td colspan="8">Không tìm thấy khách hàng nào.</td></tr>';
+          return;
+        }
+
+        items.forEach(c => {
+          const tr = document.createElement('tr');
+
+          // Name & username
+          const nameTd = document.createElement('td');
+          nameTd.innerHTML = `<strong>${c.fullName || c.username}</strong><br><small class="muted">@${c.username}</small>`;
+          tr.appendChild(nameTd);
+
+          // Phone
+          const phoneTd = document.createElement('td');
+          phoneTd.textContent = c.phone || '—';
+          tr.appendChild(phoneTd);
+
+          // Email
+          const emailTd = document.createElement('td');
+          emailTd.textContent = c.email || '—';
+          tr.appendChild(emailTd);
+
+          // Address
+          const addressTd = document.createElement('td');
+          addressTd.textContent = c.address || '—';
+          tr.appendChild(addressTd);
+
+          // Orders count
+          const ordersTd = document.createElement('td');
+          ordersTd.textContent = `${c.orderCount || 0} đơn`;
+          tr.appendChild(ordersTd);
+
+          // Total spent
+          const spentTd = document.createElement('td');
+          spentTd.innerHTML = `<strong>${Number(c.totalSpent || 0).toLocaleString('vi-VN')} ₫</strong>`;
+          tr.appendChild(spentTd);
+
+          // Status badge
+          const statusTd = document.createElement('td');
+          const isLocked = c.accountStatus === 'LOCKED';
+          statusTd.innerHTML = `<span class="badge ${isLocked ? 'error' : 'success'}">${isLocked ? 'Đã khóa' : 'Hoạt động'}</span>`;
+          tr.appendChild(statusTd);
+
+          // Actions
+          const actionTd = document.createElement('td');
+          const toggleBtn = document.createElement('button');
+          toggleBtn.className = `table-action ${isLocked ? 'primary' : 'danger'}`;
+          toggleBtn.textContent = isLocked ? 'Mở khóa' : 'Khóa tài khoản';
+          toggleBtn.addEventListener('click', async () => {
+            const nextStatus = isLocked ? 'ACTIVE' : 'LOCKED';
+            const actionText = isLocked ? 'mở khóa' : 'khóa';
+            if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản của ${c.fullName || c.username}?`)) return;
+
+            try {
+              const res = await fetch(`/api/admin/customers/${c.id || c._id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: nextStatus })
+              });
+              const result = await res.json();
+              if (!res.ok) throw new Error(result.message || 'Không thể cập nhật trạng thái.');
+              showNotice(`Đã ${actionText} tài khoản thành công.`);
+              load();
+            } catch (err) {
+              showNotice(err.message, true);
+            }
+          });
+          actionTd.appendChild(toggleBtn);
+          tr.appendChild(actionTd);
+
+          rows.appendChild(tr);
+        });
+      }
+
+      async function load() {
+        const q = searchInput.value.trim();
+        const status = statusFilter.value;
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (status) params.set('status', status);
+
+        try {
+          const res = await fetch(`/api/admin/customers?${params.toString()}`);
+          const result = await res.json();
+          if (!res.ok) throw new Error(result.message || 'Không thể tải danh sách khách hàng.');
+          customers = result.items || [];
+          render(customers);
+        } catch (err) {
+          showNotice(err.message, true);
+          rows.innerHTML = '<tr><td colspan="8">Lỗi tải danh sách khách hàng.</td></tr>';
+        }
+      }
+
+      let debounceTimer = null;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(load, 300);
+      });
+      statusFilter.addEventListener('change', load);
+
+      load();
+    })();
+  </script>
+</body>
+</html>

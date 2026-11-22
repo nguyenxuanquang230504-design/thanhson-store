@@ -75,6 +75,10 @@ function makeMongoFilter(options) {
     if (options.color) filter.$and.push({ $or: [{ colors: options.color }, { 'variants.color': options.color }] });
   }
   if (options.material) filter.material = new RegExp(`^${escapeRegex(options.material)}$`, 'i');
+  if (options.designStyle) filter.designStyle = new RegExp(`^${escapeRegex(options.designStyle)}$`, 'i');
+  if (options.sale === 'true' || options.sale === true) filter.salePrice = { $ne: null };
+  if (options.collection === 'true' || options.collection === true) filter.isFeatured = true;
+  if (options.isNewArrival === 'true' || options.isNewArrival === true) filter.isNewArrival = true;
   if (options.brand) filter.brand = new RegExp(`^${escapeRegex(options.brand)}$`, 'i');
   if (options.availableOnly === 'true') filter.$and.push({ $or: [
     { variants: { $size: 0 }, stock: { $gt: 0 } },
@@ -163,25 +167,30 @@ async function findProduct(identifier) {
 
 async function homeProducts() {
   if (await useJsonCatalogFallback()) {
-    const products = productRepository.findAll();
+    const products = productRepository.findAll().map(publicProduct);
     return {
       featured: products.slice(0, 4),
-      newArrivals: products.slice(4, 8),
-      women: products.filter(product => product.category === 'woman').slice(0, 4),
-      men: products.filter(product => product.category === 'man').slice(0, 4),
-      kids: products.filter(product => product.category === 'kids').slice(0, 4)
+      newArrivals: products.slice(0, 4),
+      promotions: products.slice(0, 4),
+      bestSellers: products.slice(0, 4)
     };
   }
-  const docs = await Product.find({ productStatus: 'PUBLISHED' }).sort({ createdAt: -1 }).limit(24).populate('category', 'name slug').lean();
+  const docs = await Product.find({ productStatus: 'PUBLISHED' })
+    .sort({ createdAt: -1 })
+    .limit(30)
+    .populate('category', 'name slug')
+    .lean();
   const products = docs.map(publicProduct);
+
+  const featured = products.filter(p => p.isFeatured);
+  const newArrivals = products.filter(p => p.isNewArrival);
+  const promotions = products.filter(p => p.salePrice != null && p.salePrice < p.originalPrice);
+
   return {
-    featured: products.filter(product => product.isFeatured).slice(0, 4).length
-      ? products.filter(product => product.isFeatured).slice(0, 4)
-      : products.slice(0, 4),
-    newArrivals: products.slice(0, 8),
-    women: products.filter(product => ['woman', 'women'].includes(product.category)),
-    men: products.filter(product => ['man', 'men'].includes(product.category)),
-    kids: products.filter(product => ['kids', 'kid'].includes(product.category))
+    featured: featured.length ? featured.slice(0, 4) : products.slice(0, 4),
+    newArrivals: newArrivals.length ? newArrivals.slice(0, 4) : products.slice(0, 4),
+    promotions: promotions.length ? promotions.slice(0, 4) : products.slice(0, 4),
+    bestSellers: products.slice(0, 4)
   };
 }
 

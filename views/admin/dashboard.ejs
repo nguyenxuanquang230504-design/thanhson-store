@@ -1,19 +1,114 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin | Thanh Sơn</title><link rel="stylesheet" href="/css/admin.css"></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard | Thanh Sơn Store</title>
+  <link rel="stylesheet" href="/css/admin.css?v=20261124">
+</head>
 <body class="admin-shell">
   <%- include('_layout', { active: 'dashboard' }) %>
   <main class="admin-main">
-    <header class="admin-top"><div><p class="eyebrow">OVERVIEW</p><h1>Tổng quan</h1></div><a class="admin-button" href="/">Mở cửa hàng ↗</a></header>
-    <% if (error) { %><div class="notice error"><%= error %></div><% } %>
-    <% if (stats) { %>
+    <header class="admin-top">
+      <div>
+        <p class="eyebrow">TỔNG QUAN DOANH NGHIỆP</p>
+        <h1>Bảng điều khiển quản trị</h1>
+        <p class="muted">Dữ liệu kinh doanh thời gian thực từ MongoDB Atlas.</p>
+      </div>
+      <div class="admin-top-actions">
+        <a class="admin-button" href="/" target="_blank">Mở cửa hàng ↗</a>
+      </div>
+    </header>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="notice error"><%= error %></div>
+    <% } %>
+
+    <% if (typeof stats !== 'undefined' && stats) { %>
+      <!-- Doanh thu cốt lõi -->
       <section class="stat-grid">
-        <article class="stat-card"><span>Sản phẩm đang bán</span><strong><%= stats.products %></strong></article>
-        <article class="stat-card"><span>Danh mục hiển thị</span><strong><%= stats.categories %></strong></article>
-        <article class="stat-card"><span>Đơn hàng trong MongoDB</span><strong><%= stats.orders %></strong></article>
+        <article class="stat-card highlight">
+          <span>Doanh thu thực tế (Đã thu)</span>
+          <strong><%= Number(stats.revenue?.totalPaid || 0).toLocaleString('vi-VN') %> ₫</strong>
+          <small class="muted">Chỉ tính đơn đã thanh toán thành công</small>
+        </article>
+        <article class="stat-card">
+          <span>Doanh thu hôm nay</span>
+          <strong><%= Number(stats.revenue?.today || 0).toLocaleString('vi-VN') %> ₫</strong>
+          <small class="muted">Từ 00:00 hôm nay</small>
+        </article>
+        <article class="stat-card">
+          <span>Doanh thu tháng này</span>
+          <strong><%= Number(stats.revenue?.thisMonth || 0).toLocaleString('vi-VN') %> ₫</strong>
+          <small class="muted">Tháng hiện tại</small>
+        </article>
+        <article class="stat-card">
+          <span>Tổng giá trị đơn (Gross)</span>
+          <strong><%= Number(stats.revenue?.gross || 0).toLocaleString('vi-VN') %> ₫</strong>
+          <small class="muted">Bao gồm đơn đang xử lý</small>
+        </article>
+      </section>
+
+      <!-- Đơn hàng & Tồn kho -->
+      <section class="stat-grid">
+        <article class="stat-card">
+          <span>Tổng đơn hàng</span>
+          <strong><%= stats.orders?.total || 0 %></strong>
+          <small class="muted">Toàn bộ thời gian</small>
+        </article>
+        <article class="stat-card warning">
+          <span>Chờ xử lý / Chờ thanh toán</span>
+          <strong><%= (stats.orders?.pending || 0) %></strong>
+          <small class="muted">Cần xác nhận</small>
+        </article>
+        <article class="stat-card info">
+          <span>Đang giao / Đã giao</span>
+          <strong><%= (stats.orders?.shipped || 0) + (stats.orders?.delivered || 0) %></strong>
+          <small class="muted"><%= stats.orders?.delivered || 0 %> đã giao thành công</small>
+        </article>
+        <article class="stat-card danger">
+          <span>Đơn đã hủy</span>
+          <strong><%= stats.orders?.cancelled || 0 %></strong>
+          <small class="muted">Giá trị hủy: <%= Number(stats.revenue?.cancelled || 0).toLocaleString('vi-VN') %> ₫</small>
+        </article>
+      </section>
+
+      <!-- Khách hàng & Sản phẩm -->
+      <section class="stat-grid">
+        <article class="stat-card">
+          <span>Khách hàng thành viên</span>
+          <strong><%= stats.customers?.total || 0 %></strong>
+          <small class="muted">Tài khoản đăng ký</small>
+        </article>
+        <article class="stat-card">
+          <span>Sản phẩm Áo dài đang bán</span>
+          <strong><%= stats.products?.active || 0 %></strong>
+          <small class="muted">Danh mục: Áo dài cách tân</small>
+        </article>
+        <article class="stat-card <%= (stats.inventory?.lowStock || 0) > 0 ? 'warning' : '' %>">
+          <span>Sắp hết hàng (≤ 10 chiếc)</span>
+          <strong><%= stats.inventory?.lowStock || 0 %></strong>
+          <small class="muted">Cần bổ sung kho</small>
+        </article>
+        <article class="stat-card <%= (stats.inventory?.outOfStock || 0) > 0 ? 'danger' : '' %>">
+          <span>Hết hàng (0 chiếc)</span>
+          <strong><%= stats.inventory?.outOfStock || 0 %></strong>
+          <small class="muted">Tạm ngưng đặt hàng</small>
+        </article>
       </section>
     <% } %>
-    <section class="admin-panel"><p class="eyebrow">QUICK ACTIONS</p><h2>Quản lý cửa hàng</h2><p class="muted">Tạo danh mục trước, sau đó thêm sản phẩm vào danh mục đó.</p><div class="admin-actions"><a class="admin-button primary" href="/admin/categories">Quản lý danh mục</a><a class="admin-button" href="/admin/products">Quản lý sản phẩm</a></div></section>
+
+    <section class="admin-panel">
+      <p class="eyebrow">QUẢN LÝ NHANH</p>
+      <h2>Trung tâm điều hành cửa hàng</h2>
+      <div class="admin-actions">
+        <a class="admin-button primary" href="/admin/products">+ Quản lý sản phẩm</a>
+        <a class="admin-button" href="/admin/orders">Đơn hàng cần xử lý</a>
+        <a class="admin-button" href="/admin/customers">Danh sách khách hàng</a>
+        <a class="admin-button" href="/admin/reports">Báo cáo doanh thu chi tiết</a>
+        <a class="admin-button" href="/admin/categories">Cấu hình danh mục</a>
+      </div>
+    </section>
   </main>
   <script src="/js/admin.js"></script>
 </body>

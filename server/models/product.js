@@ -33,11 +33,15 @@ const productSchema = new mongoose.Schema({
   sizes: { type: [String], default: [] },
   colors: { type: [String], default: [] },
   material: { type: String, default: '' },
+  designStyle: { type: String, default: '', trim: true },
   subcategory: { type: String, default: '' },
   tags: { type: [String], default: [] },
   variants: { type: [variantSchema], default: [] },
   productStatus: { type: String, enum: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'], default: 'PUBLISHED' },
   isFeatured: { type: Boolean, default: false },
+  isNewArrival: { type: Boolean, default: false },
+  seoTitle: { type: String, default: '', maxlength: 160 },
+  seoDescription: { type: String, default: '', maxlength: 320 },
   searchTokens: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -54,7 +58,7 @@ productSchema.pre('validate', function prepareSearch() {
   this.searchTokens = searchTokens([
     this.name, this.productName, this.productCode, this.sku, this.categorySlug,
     this.categoryName, this.brand, this.genderTarget, this.subcategory,
-    this.description, this.shortDescription, this.desc, this.material,
+    this.description, this.shortDescription, this.desc, this.material, this.designStyle,
     ...this.tags, ...this.sizes, ...this.colors,
     ...this.variants.flatMap(variant => [variant.size, variant.color, variant.sku])
   ]);

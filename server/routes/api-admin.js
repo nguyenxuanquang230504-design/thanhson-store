@@ -5,6 +5,8 @@ const AdminUser = require('../models/admin-user');
 const Category = require('../models/category');
 const Product = require('../models/product');
 const Order = require('../models/order');
+const Customer = require('../models/customer');
+const accountService = require('../services/account-service');
 const { isMongoConnected } = require('../lib/mongo');
 const { slugify, searchTokens } = require('../lib/search-text');
 const { requireAdmin, requireRole, asyncRoute } = require('../middleware/admin-auth');
@@ -126,6 +128,10 @@ router.get('/categories', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async 
 router.post('/categories', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
   if (requireMongo(res)) return;
   const body = normalizeCategoryBody(req.body);
+  const activeCount = await Category.countDocuments({ status: 'PUBLISHED' });
+  if (activeCount >= 1 && body.status === 'PUBLISHED') {
+    return res.status(400).json({ ok: false, message: 'Thanh Sơn Store chỉ sử dụng duy nhất một danh mục đang hoạt động: Áo dài cách tân.' });
+  }
   if (body.parent && !isValidId(body.parent)) return res.status(400).json({ ok: false, message: 'Danh mục cha không hợp lệ.' });
   if (body.parent && !(await Category.exists({ _id: body.parent, status: { $ne: 'ARCHIVED' } }))) {
     return res.status(400).json({ ok: false, message: 'Không tìm thấy danh mục cha.' });
@@ -138,6 +144,14 @@ router.put('/categories/:id', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(as
   if (requireMongo(res)) return;
   if (!isValidId(req.params.id)) return res.status(400).json({ ok: false, message: 'ID danh mục không hợp lệ.' });
   const body = normalizeCategoryBody(req.body);
+
+  const existing = await Category.findById(req.params.id);
+  if (!existing) return res.status(404).json({ ok: false, message: 'Không tìm thấy danh mục.' });
+
+  if (existing.slug === 'ao-dai-cach-tan' && body.status === 'ARCHIVED') {
+    return res.status(400).json({ ok: false, message: 'Không thể lưu trữ danh mục hoạt động duy nhất của cửa hàng.' });
+  }
+
   if (body.parent) {
     if (!isValidId(body.parent) || body.parent === req.params.id) return res.status(400).json({ ok: false, message: 'Danh mục cha không hợp lệ.' });
     let parent = await Category.findById(body.parent).select('parent');
@@ -150,19 +164,24 @@ router.put('/categories/:id', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(as
     if (depth >= 32) return res.status(400).json({ ok: false, message: 'Cấu trúc danh mục cha không hợp lệ.' });
   }
   const item = await Category.findByIdAndUpdate(req.params.id, { ...body, updatedAt: new Date() }, { new: true, runValidators: true });
-  if (!item) return res.status(404).json({ ok: false, message: 'Không tìm thấy danh mục.' });
   res.json({ ok: true, item });
 }));
 
 router.delete('/categories/:id', requireRole('SUPER_ADMIN'), asyncRoute(async (req, res) => {
   if (requireMongo(res)) return;
   if (!isValidId(req.params.id)) return res.status(400).json({ ok: false, message: 'ID danh mục không hợp lệ.' });
-  const [products, children, item] = await Promise.all([
-    Product.countDocuments({ category: req.params.id }),
-    Category.countDocuments({ parent: req.params.id }),
-    Category.findById(req.params.id)
-  ]);
+  const item = await Category.findById(req.params.id);
   if (!item) return res.status(404).json({ ok: false, message: 'Không tìm thấy danh mục.' });
+  if (item.slug === 'ao-dai-cach-tan' || item.status === 'PUBLISHED') {
+    const activeCount = await Category.countDocuments({ status: 'PUBLISHED' });
+    if (activeCount <= 1) {
+      return res.status(400).json({ ok: false, message: 'Không thể xóa hoặc lưu trữ danh mục hoạt động duy nhất của cửa hàng.' });
+    }
+  }
+  const [products, children] = await Promise.all([
+    Product.countDocuments({ category: req.params.id }),
+    Category.countDocuments({ parent: req.params.id })
+  ]);
   if (products || children) return res.status(409).json({ ok: false, products, children, message: 'Danh mục đang được sử dụng. Hãy chuyển sản phẩm/danh mục con hoặc lưu trữ.' });
   item.status = 'ARCHIVED';
   await item.save();
@@ -242,6 +261,7 @@ function productBody(body) {
     category: body.category || null,
     brand: String(body.brand || '').trim(),
     material: String(body.material || '').trim(),
+    designStyle: String(body.designStyle || '').trim(),
     subcategory: String(body.subcategory || '').trim(),
     genderTarget: String(body.genderTarget || '').trim(),
     tags: tags.map(value => String(value).trim()).filter(Boolean),
@@ -249,12 +269,15 @@ function productBody(body) {
     colors,
     variants,
     productStatus: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'].includes(body.productStatus) ? body.productStatus : 'DRAFT',
-    isFeatured: body.isFeatured === true || body.isFeatured === 'true'
+    isFeatured: body.isFeatured === true || body.isFeatured === 'true',
+    isNewArrival: body.isNewArrival === true || body.isNewArrival === 'true',
+    seoTitle: String(body.seoTitle || '').trim(),
+    seoDescription: String(body.seoDescription || '').trim()
   };
   if (fields.salePrice != null && (!Number.isFinite(fields.salePrice) || fields.salePrice < 0)) throw Object.assign(new Error('Giá khuyến mãi không hợp lệ.'), { status: 400 });
   fields.searchTokens = searchTokens([
     fields.name, fields.productCode, fields.sku, fields.description,
-    fields.shortDescription, fields.brand, fields.material,
+    fields.shortDescription, fields.brand, fields.material, fields.designStyle,
     fields.subcategory, fields.genderTarget, ...fields.tags,
     ...fields.sizes, ...fields.colors,
     ...fields.variants.flatMap(variant => [variant.size, variant.color, variant.sku])
@@ -270,6 +293,13 @@ router.post('/products', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (
     if (!category) return res.status(400).json({ ok: false, message: 'Danh mục không tồn tại.' });
     body.categorySlug = category.slug;
     body.categoryName = category.name;
+  } else {
+    const activeCategory = await Category.findOne({ status: 'PUBLISHED' }).select('_id slug name');
+    if (activeCategory) {
+      body.category = activeCategory._id;
+      body.categorySlug = activeCategory.slug;
+      body.categoryName = activeCategory.name;
+    }
   }
   const item = await Product.create(body);
   res.status(201).json({ ok: true, item });
@@ -285,8 +315,12 @@ router.put('/products/:id', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(asyn
     body.categorySlug = category.slug;
     body.categoryName = category.name;
   } else {
-    body.categorySlug = '';
-    body.categoryName = '';
+    const activeCategory = await Category.findOne({ status: 'PUBLISHED' }).select('_id slug name');
+    if (activeCategory) {
+      body.category = activeCategory._id;
+      body.categorySlug = activeCategory.slug;
+      body.categoryName = activeCategory.name;
+    }
   }
   const item = await Product.findByIdAndUpdate(req.params.id, { ...body, updatedAt: new Date() }, { new: true, runValidators: true });
   if (!item) return res.status(404).json({ ok: false, message: 'Không tìm thấy sản phẩm.' });
@@ -368,6 +402,102 @@ router.post('/orders/:id/cancel', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRout
   if (requireMongo(res)) return;
   const order = await purchaseService.cancelMongoOrder(String(req.params.id || ''));
   res.json({ ok: true, status: order.status });
+}));
+
+// Customer Management APIs
+router.get('/customers', requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), asyncRoute(async (req, res) => {
+  const query = String(req.query.q || '').trim();
+  const status = String(req.query.status || '').trim();
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const result = await accountService.listCustomers({ query, status, page, perPage: 25 });
+  res.json({ ok: true, ...result });
+}));
+
+router.post('/customers/:id/status', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  const customerId = req.params.id;
+  const nextStatus = String(req.body.status || 'ACTIVE');
+  const updated = await accountService.toggleCustomerStatus(customerId, nextStatus);
+  if (!updated) return res.status(404).json({ ok: false, message: 'Không tìm thấy khách hàng.' });
+  res.json({ ok: true, customer: updated });
+}));
+
+// Revenue Reports APIs
+router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  await purchaseService.expirePendingMongoOrders();
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const allOrders = await Order.find().lean();
+
+  let totalPaidRevenue = 0;
+  let revenueToday = 0;
+  let revenueThisMonth = 0;
+  let paidOrderCount = 0;
+
+  const paymentMethodMap = {
+    bank_transfer: { method: 'bank_transfer', count: 0, revenue: 0 },
+    cod: { method: 'cod', count: 0, revenue: 0 }
+  };
+
+  const statusMap = {};
+
+  for (const order of allOrders) {
+    const amount = Number(order.totalAmount || 0);
+    const createdAt = new Date(order.createdAt);
+    const pm = order.paymentMethod || 'bank_transfer';
+
+    if (!paymentMethodMap[pm]) paymentMethodMap[pm] = { method: pm, count: 0, revenue: 0 };
+    paymentMethodMap[pm].count += 1;
+
+    if (!statusMap[order.status]) statusMap[order.status] = { status: order.status, count: 0, value: 0 };
+    statusMap[order.status].count += 1;
+    statusMap[order.status].value += amount;
+
+    if (order.paymentStatus === 'paid') {
+      totalPaidRevenue += amount;
+      paidOrderCount += 1;
+      paymentMethodMap[pm].revenue += amount;
+
+      if (createdAt >= startOfToday) revenueToday += amount;
+      if (createdAt >= startOfMonth) revenueThisMonth += amount;
+    }
+  }
+
+  const aov = paidOrderCount > 0 ? Math.round(totalPaidRevenue / paidOrderCount) : 0;
+
+  // Best sellers aggregation
+  const bestSellersAgg = await Order.aggregate([
+    { $match: { status: { $nin: ['cancelled', 'failed'] } } },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$items.productId',
+        name: { $first: '$items.name' },
+        sku: { $first: '$items.sku' },
+        quantity: { $sum: '$items.qty' },
+        revenue: { $sum: '$items.subtotal' }
+      }
+    },
+    { $sort: { quantity: -1 } },
+    { $limit: 10 }
+  ]);
+
+  res.json({
+    ok: true,
+    totalPaidRevenue,
+    revenueToday,
+    revenueThisMonth,
+    paidOrderCount,
+    totalOrders: allOrders.length,
+    aov,
+    paymentMethods: Object.values(paymentMethodMap),
+    orderStatuses: Object.values(statusMap),
+    bestSellers: bestSellersAgg
+  });
 }));
 
 module.exports = router;

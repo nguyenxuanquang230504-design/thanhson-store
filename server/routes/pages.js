@@ -39,6 +39,9 @@ async function renderCatalogPage(req, res, searchMode) {
     size: String(req.query.size || '').trim(),
     color: String(req.query.color || '').trim(),
     material: String(req.query.material || '').trim(),
+    designStyle: String(req.query.designStyle || '').trim(),
+    sale: String(req.query.sale || '').trim(),
+    collection: String(req.query.collection || '').trim(),
     brand: String(req.query.brand || '').trim(),
     availableOnly: String(req.query.availableOnly || '').trim() === 'true' ? 'true' : '',
     page: String(req.query.page || '1').trim()
@@ -85,7 +88,29 @@ router.get('/health', (req, res) => {
   });
 });
 
-router.get('/dang-nhap', (req, res) => res.render('login', { message: req.query.message || '', currentUser: req.session.user || null }));
+router.get(['/dang-nhap', '/tai-khoan'], asyncRoute(async (req, res) => {
+  let userOrders = [];
+  if (req.session.user) {
+    const user = req.session.user;
+    const customerId = String(user.id || user._id || '');
+    const username = user.username || '';
+    if (require('../lib/mongo').isMongoConnected()) {
+      const Order = require('../models/order');
+      const conditions = [];
+      if (customerId) conditions.push({ customerId });
+      if (username) conditions.push({ 'user.username': username });
+      if (conditions.length) {
+        userOrders = await Order.find({ $or: conditions }).sort({ createdAt: -1 }).limit(20).lean();
+      }
+    }
+  }
+  res.render('login', {
+    message: req.query.message || '',
+    currentUser: req.session.user || null,
+    orders: userOrders
+  });
+}));
+
 router.get('/dang-ky', (req, res) => res.render('register', { message: req.query.message || '' }));
 
 router.get('/tim-kiem', asyncRoute((req, res) => renderCatalogPage(req, res, true)));
@@ -123,15 +148,20 @@ router.get('/don-hang', asyncRoute(async (req, res) => {
   const cookies = String(req.headers.cookie || '').split(';');
   const accessCookie = cookies.map(cookie => cookie.trim()).find(cookie => cookie.startsWith('tsf-order-access='));
   const accessToken = accessCookie ? accessCookie.slice('tsf-order-access='.length) : '';
+  const requestedId = String(req.query.id || req.session.lastOrderId || '').trim();
   let order = null;
-  if (req.session.user) {
+  if (req.session.user && requestedId) {
     const user = req.session.user;
-    order = await purchaseService.getCustomerOrderById(req.session.lastOrderId, {
+    order = await purchaseService.getCustomerOrderById(requestedId, {
       customerId: String(user.id || user._id || user.username || ''),
       username: user.username || ''
     });
   }
   if (!order && accessToken) order = await purchaseService.getCustomerOrderByAccessToken(accessToken);
+  if (!order && requestedId && !req.session.user) {
+    // If not authenticated and no valid cookie, redirect to login or cart
+    return res.redirect('/dang-nhap?message=' + encodeURIComponent('Vui lòng đăng nhập để xem chi tiết đơn hàng.'));
+  }
   if (!order) return res.redirect('/gio-hang');
   res.render('order-detail', { order });
 }));

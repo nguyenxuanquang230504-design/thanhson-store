@@ -1,14 +1,49 @@
 const { readJson, writeJson } = require('../lib/json-store');
 const { usersFile } = require('../config');
+const { isMongoConnected } = require('../lib/mongo');
+const Customer = require('../models/customer');
+const Order = require('../models/order');
 const bcrypt = require('bcryptjs');
 
-function findUser(username) {
+function findUserLocal(username) {
   const normalized = String(username || '').trim().toLowerCase();
   return readJson(usersFile, []).find(user => user.username.toLowerCase() === normalized);
 }
 
-function authenticate(username, password) {
-  const user = findUser(username);
+async function authenticate(username, password) {
+  const normalized = String(username || '').trim().toLowerCase();
+
+  if (isMongoConnected()) {
+    const customer = await Customer.findOne({ username: normalized });
+    if (!customer) {
+      return { ok: false, status: 404, message: 'Tài khoản chưa tồn tại. Vui lòng đăng ký trước.' };
+    }
+    if (customer.accountStatus === 'LOCKED') {
+      return { ok: false, status: 403, message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ shop.' };
+    }
+    const valid = await bcrypt.compare(password, customer.passwordHash);
+    if (!valid) return { ok: false, status: 401, message: 'Sai mật khẩu.' };
+
+    customer.lastLoginAt = new Date();
+    await customer.save();
+
+    return {
+      ok: true,
+      user: {
+        id: String(customer._id),
+        _id: String(customer._id),
+        username: customer.username,
+        fullName: customer.fullName || customer.username,
+        phone: customer.phone || '',
+        email: customer.email || '',
+        address: customer.address || '',
+        wishlist: Array.isArray(customer.wishlist) ? customer.wishlist : []
+      }
+    };
+  }
+
+  // Local JSON Fallback
+  const user = findUserLocal(normalized);
   if (!user) return { ok: false, status: 404, message: 'Tài khoản chưa tồn tại. Vui lòng đăng ký trước.' };
   let valid;
   if (typeof user.passwordHash === 'string') {
@@ -35,38 +70,200 @@ function authenticate(username, password) {
       username: user.username,
       fullName: user.fullName || user.username,
       phone: user.phone || '',
+      email: user.email || '',
+      address: user.address || '',
       wishlist: Array.isArray(user.wishlist) ? user.wishlist : []
     }
   };
 }
 
-function registerUser({ username, password, fullName, phone }) {
+async function registerUser({ username, password, fullName, phone, email = '', address = '' }) {
+  const normalizedUsername = String(username || '').trim().toLowerCase();
+  const cleanPhone = String(phone || '').trim().replace(/\s/g, '');
+  const cleanEmail = String(email || '').trim().toLowerCase() || null;
+
+  if (isMongoConnected()) {
+    const existingUsername = await Customer.findOne({ username: normalizedUsername });
+    if (existingUsername) {
+      return { ok: false, status: 409, message: 'Tên đăng nhập đã tồn tại.' };
+    }
+    const existingPhone = await Customer.findOne({ phone: cleanPhone });
+    if (existingPhone) {
+      return { ok: false, status: 409, message: 'Số điện thoại này đã được đăng ký tài khoản.' };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const customer = await Customer.create({
+      fullName: String(fullName || '').trim(),
+      phone: cleanPhone,
+      email: cleanEmail,
+      username: normalizedUsername,
+      passwordHash,
+      address: String(address || '').trim(),
+      accountStatus: 'ACTIVE',
+      wishlist: []
+    });
+
+    return {
+      ok: true,
+      user: {
+        id: String(customer._id),
+        username: customer.username,
+        fullName: customer.fullName,
+        phone: customer.phone
+      }
+    };
+  }
+
+  // Local JSON Fallback
   const users = readJson(usersFile, []);
-  if (users.some(user => user.username.toLowerCase() === username.toLowerCase())) {
+  if (users.some(user => user.username.toLowerCase() === normalizedUsername)) {
     return { ok: false, status: 409, message: 'Tên đăng nhập đã tồn tại.' };
   }
 
   const user = {
     id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    username,
+    username: normalizedUsername,
     passwordHash: bcrypt.hashSync(password, 12),
     fullName,
-    phone,
+    phone: cleanPhone,
+    email: cleanEmail || '',
+    address: String(address || '').trim(),
     wishlist: [],
     createdAt: new Date().toISOString()
   };
   users.push(user);
   writeJson(usersFile, users);
-  return { ok: true };
+  return { ok: true, user: { id: user.id, username: user.username, fullName: user.fullName, phone: user.phone } };
 }
 
-function updateWishlist(username, wishlist) {
+async function updateWishlist(username, wishlist) {
+  const normalized = String(username || '').trim().toLowerCase();
+  const cleanWishlist = [...new Set((wishlist || []).map(String))];
+
+  if (isMongoConnected()) {
+    await Customer.updateOne({ username: normalized }, { $set: { wishlist: cleanWishlist, updatedAt: new Date() } });
+    return true;
+  }
+
   const users = readJson(usersFile, []);
-  const user = users.find(item => item.username.toLowerCase() === String(username || '').toLowerCase());
+  const user = users.find(item => item.username.toLowerCase() === normalized);
   if (!user) return false;
-  user.wishlist = [...new Set(wishlist.map(String))];
+  user.wishlist = cleanWishlist;
   writeJson(usersFile, users);
   return true;
 }
 
-module.exports = { authenticate, registerUser, updateWishlist };
+async function getCustomerById(id) {
+  if (isMongoConnected()) {
+    return Customer.findById(id).select('-passwordHash').lean();
+  }
+  return readJson(usersFile, []).find(u => String(u.id) === String(id)) || null;
+}
+
+async function updateProfile(id, { fullName, phone, address, email }) {
+  if (isMongoConnected()) {
+    const update = {};
+    if (fullName) update.fullName = String(fullName).trim();
+    if (phone) update.phone = String(phone).trim();
+    if (address !== undefined) update.address = String(address).trim();
+    if (email !== undefined) update.email = String(email).trim().toLowerCase() || null;
+    update.updatedAt = new Date();
+
+    const customer = await Customer.findByIdAndUpdate(id, { $set: update }, { new: true }).select('-passwordHash').lean();
+    return customer;
+  }
+
+  const users = readJson(usersFile, []);
+  const index = users.findIndex(u => String(u.id) === String(id));
+  if (index === -1) return null;
+  if (fullName) users[index].fullName = String(fullName).trim();
+  if (phone) users[index].phone = String(phone).trim();
+  if (address !== undefined) users[index].address = String(address).trim();
+  if (email !== undefined) users[index].email = String(email).trim().toLowerCase();
+  writeJson(usersFile, users);
+  return users[index];
+}
+
+async function listCustomers({ query = '', page = 1, perPage = 20, status = '' } = {}) {
+  if (!isMongoConnected()) {
+    let items = readJson(usersFile, []).map(u => ({
+      id: u.id,
+      _id: u.id,
+      username: u.username,
+      fullName: u.fullName || u.username,
+      phone: u.phone || '',
+      email: u.email || '',
+      address: u.address || '',
+      accountStatus: 'ACTIVE',
+      createdAt: u.createdAt || new Date()
+    }));
+    if (query) {
+      const q = query.toLowerCase();
+      items = items.filter(u => u.fullName.toLowerCase().includes(q) || u.phone.includes(q) || u.username.toLowerCase().includes(q));
+    }
+    return { items, pagination: { total: items.length, page: 1, totalPages: 1, perPage } };
+  }
+
+  const filter = {};
+  if (status) filter.accountStatus = status;
+  if (query) {
+    const regex = new RegExp(String(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ fullName: regex }, { phone: regex }, { username: regex }, { email: regex }];
+  }
+
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(perPage) || 20));
+  const skip = (currentPage - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    Customer.find(filter).select('-passwordHash').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Customer.countDocuments(filter)
+  ]);
+
+  // Attach order summary for each customer
+  const customerIds = items.map(c => String(c._id));
+  const orderStats = await Order.aggregate([
+    { $match: { customerId: { $in: customerIds } } },
+    { $group: { _id: '$customerId', orderCount: { $sum: 1 }, totalSpent: { $sum: '$totalAmount' } } }
+  ]);
+  const statsMap = new Map(orderStats.map(s => [String(s._id), s]));
+
+  const enrichedItems = items.map(c => ({
+    ...c,
+    id: String(c._id),
+    orderCount: statsMap.get(String(c._id))?.orderCount || 0,
+    totalSpent: statsMap.get(String(c._id))?.totalSpent || 0
+  }));
+
+  return {
+    items: enrichedItems,
+    pagination: {
+      total,
+      page: currentPage,
+      perPage: limit,
+      totalPages: Math.max(1, Math.ceil(total / limit))
+    }
+  };
+}
+
+async function toggleCustomerStatus(id, newStatus) {
+  if (!['ACTIVE', 'LOCKED', 'DEACTIVATED'].includes(newStatus)) {
+    throw new Error('Trạng thái không hợp lệ.');
+  }
+  if (isMongoConnected()) {
+    const customer = await Customer.findByIdAndUpdate(id, { $set: { accountStatus: newStatus, updatedAt: new Date() } }, { new: true }).select('-passwordHash').lean();
+    return customer;
+  }
+  return null;
+}
+
+module.exports = {
+  authenticate,
+  registerUser,
+  updateWishlist,
+  getCustomerById,
+  updateProfile,
+  listCustomers,
+  toggleCustomerStatus
+};

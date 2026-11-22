@@ -21,19 +21,22 @@
           <label>Giá gốc<input name="originalPrice" type="number" min="0" step="1"></label>
           <label>Giá khuyến mãi<input name="salePrice" type="number" min="0" step="1"></label>
           <label>Tồn kho tổng (tự tính khi có biến thể)<input name="stock" type="number" min="0" step="1" value="0"></label>
-          <label>Chất liệu<input name="material"></label>
-          <label>Đối tượng<input name="genderTarget" placeholder="woman / man / kids"></label>
-          <label>Tags<input name="tags" placeholder="thời trang, công sở"></label>
-          <label>Ảnh chính (URL)<input name="image" type="url" placeholder="https://..."></label>
+          <label>Chất liệu<input name="material" placeholder="Lụa Tơ Tằm, Gấm, Nhung, Chiffon..."></label>
+          <label>Kiểu dáng thiết kế<input name="designStyle" placeholder="Dáng suông / Tay lỡ / Cổ vuông / Tay bồng / Tà kép"></label>
+          <label>Tags<input name="tags" placeholder="áo dài, cách tân, lễ tết, sự kiện"></label>
+          <label>Ảnh chính (URL)<input name="image" type="url" placeholder="https://... hoặc /images/..."></label>
           <label>Hoặc tải ảnh lên<input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp"><button class="admin-button" id="uploadProductImage" type="button">Tải ảnh lên Cloudinary</button></label>
           <label class="wide">Mô tả ngắn<input name="shortDescription"></label>
-          <label class="wide">Mô tả<textarea name="description" rows="4"></textarea></label>
+          <label class="wide">Mô tả chi tiết<textarea name="description" rows="4"></textarea></label>
+          <label>SEO Title<input name="seoTitle" maxlength="160" placeholder="Tiêu đề trang chi tiết"></label>
+          <label>SEO Description<input name="seoDescription" maxlength="320" placeholder="Mô tả cho công cụ tìm kiếm"></label>
           <section class="variant-editor wide" aria-labelledby="variantHeading">
             <div class="variant-editor-heading"><div><h3 id="variantHeading">Tồn kho theo biến thể</h3><p class="muted">Mỗi dòng là một tổ hợp cỡ/màu có tồn kho riêng.</p></div><button class="admin-button" id="addVariant" type="button">+ Thêm biến thể</button></div>
             <div id="variantRows" class="variant-rows"></div>
           </section>
-          <label>Trạng thái<select name="productStatus"><option value="DRAFT">Bản nháp</option><option value="PUBLISHED">Đang bán</option><option value="UNPUBLISHED">Ẩn</option><option value="ARCHIVED">Lưu trữ</option></select></label>
+          <label>Trạng thái<select name="productStatus"><option value="PUBLISHED">Đang bán</option><option value="DRAFT">Bản nháp</option><option value="UNPUBLISHED">Ẩn</option><option value="ARCHIVED">Lưu trữ</option></select></label>
           <label class="check-label"><input name="isFeatured" type="checkbox" value="true"> Sản phẩm nổi bật</label>
+          <label class="check-label"><input name="isNewArrival" type="checkbox" value="true"> Hàng mới về</label>
         </div>
         <div class="admin-actions"><button class="admin-button primary">Lưu sản phẩm</button><button class="admin-button" id="cancelProduct" type="button">Làm mới</button></div>
       </form>
@@ -98,11 +101,12 @@
           const edit=document.createElement('button');edit.className='table-action';edit.textContent='Sửa';
           edit.addEventListener('click',()=>{
             form.elements.id.value=p._id;
-            ['name','slug','productCode','sku','price','originalPrice','salePrice','stock','brand','material','genderTarget','image','shortDescription','description','productStatus'].forEach(key=>{form.elements[key].value=p[key]??'';});
+            ['name','slug','productCode','sku','price','originalPrice','salePrice','stock','brand','material','designStyle','image','shortDescription','description','productStatus','seoTitle','seoDescription'].forEach(key=>{form.elements[key].value=p[key]??'';});
             form.elements.category.value=p.category?._id||'';
             form.elements.tags.value=(p.tags||[]).join(', ');
             setVariants(p.variants||[]);
             form.elements.isFeatured.checked=Boolean(p.isFeatured);
+            form.elements.isNewArrival.checked=Boolean(p.isNewArrival);
             document.getElementById('productFormTitle').textContent='Chỉnh sửa sản phẩm';form.scrollIntoView({behavior:'smooth'});
           });
           const archive=document.createElement('button');archive.className='table-action danger';archive.textContent='Lưu trữ';
@@ -115,6 +119,7 @@
         if(!r.ok)throw new Error(d.message||'Không thể tải danh mục.');
         categories=d.items; const select=form.elements.category;select.replaceChildren(new Option('Chọn danh mục',''));
         categories.filter(c=>c.status!=='ARCHIVED').forEach(c=>select.add(new Option(c.name,c._id)));
+        if (!form.elements.category.value && select.options.length > 1) select.selectedIndex = 1;
       }
       async function loadProducts() {
         const q=document.getElementById('productSearch').value;
@@ -126,6 +131,7 @@
       form.addEventListener('submit',async e=>{
         e.preventDefault();const data=Object.fromEntries(new FormData(form));const id=data.id;delete data.id;
         data.isFeatured=form.elements.isFeatured.checked;
+        data.isNewArrival=form.elements.isNewArrival.checked;
         data.variants=collectVariants();
         const r=await fetch(id?`/api/admin/products/${id}`:'/api/admin/products',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
         const d=await r.json();if(!r.ok)return message(d.message||'Không thể lưu sản phẩm.',true);

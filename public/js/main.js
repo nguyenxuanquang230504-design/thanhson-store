@@ -144,7 +144,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const dropdown = document.querySelector('.tsf-dropdown');
   const trigger = document.querySelector('.mega-trigger');
   const menuToggle = document.querySelector('.menu-toggle');
-  const mobileMenu = document.querySelector('.mobile-menu');
+  const mobileNavOverlay = document.getElementById('mobileMenuOverlay') || document.querySelector('.mobile-nav-overlay') || document.querySelector('.mobile-menu');
+  const mobileNavClose = document.querySelector('.mobile-nav-close');
+  const mobileNavDialog = document.querySelector('.mobile-nav-dialog');
+
+  function openMobileMenu() {
+    if (!mobileNavOverlay) return;
+    mobileNavOverlay.classList.add('open');
+    mobileNavOverlay.setAttribute('aria-hidden', 'false');
+    mobileNavOverlay.inert = false;
+    document.body.classList.add('menu-open');
+    menuToggle?.setAttribute('aria-expanded', 'true');
+    menuToggle?.setAttribute('aria-label', 'Đóng menu');
+    const firstFocusable = mobileNavClose || mobileNavOverlay.querySelector('a');
+    firstFocusable?.focus();
+  }
+
+  function closeMobileMenu() {
+    if (!mobileNavOverlay) return;
+    mobileNavOverlay.classList.remove('open');
+    mobileNavOverlay.setAttribute('aria-hidden', 'true');
+    mobileNavOverlay.inert = true;
+    document.body.classList.remove('menu-open');
+    menuToggle?.setAttribute('aria-expanded', 'false');
+    menuToggle?.setAttribute('aria-label', 'Mở menu');
+    menuToggle?.focus();
+  }
 
   trigger?.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -157,14 +182,28 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.classList.remove('open');
       trigger?.setAttribute('aria-expanded', 'false');
     }
-    if (mobileMenu?.classList.contains('open') &&
-        !mobileMenu.contains(event.target) &&
-        !menuToggle?.contains(event.target)) {
-      mobileMenu.classList.remove('open');
-      mobileMenu.setAttribute('aria-hidden', 'true');
-      mobileMenu.inert = true;
-      menuToggle?.setAttribute('aria-expanded', 'false');
-      menuToggle?.setAttribute('aria-label', 'Mở menu');
+  });
+
+  menuToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (mobileNavOverlay?.classList.contains('open')) {
+      closeMobileMenu();
+    } else {
+      openMobileMenu();
+    }
+  });
+
+  mobileNavClose?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeMobileMenu();
+  });
+
+  mobileNavOverlay?.addEventListener('click', (event) => {
+    // If clicked on backdrop (outside dialog) or on a link inside
+    if (event.target.closest('a')) {
+      closeMobileMenu();
+    } else if (mobileNavDialog && !mobileNavDialog.contains(event.target)) {
+      closeMobileMenu();
     }
   });
 
@@ -172,29 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Escape') {
       dropdown?.classList.remove('open');
       trigger?.setAttribute('aria-expanded', 'false');
-      mobileMenu?.classList.remove('open');
-      mobileMenu?.setAttribute('aria-hidden', 'true');
-      if (mobileMenu) mobileMenu.inert = true;
-      menuToggle?.setAttribute('aria-expanded', 'false');
-      menuToggle?.setAttribute('aria-label', 'Mở menu');
+      if (mobileNavOverlay?.classList.contains('open')) {
+        closeMobileMenu();
+      }
     }
-  });
-
-  menuToggle?.addEventListener('click', () => {
-    const open = mobileMenu.classList.toggle('open');
-    mobileMenu.setAttribute('aria-hidden', String(!open));
-    mobileMenu.inert = !open;
-    menuToggle.setAttribute('aria-expanded', String(open));
-    menuToggle.setAttribute('aria-label', open ? 'Đóng menu' : 'Mở menu');
-  });
-
-  mobileMenu?.addEventListener('click', event => {
-    if (!event.target.closest('a')) return;
-    mobileMenu.classList.remove('open');
-    mobileMenu.setAttribute('aria-hidden', 'true');
-    mobileMenu.inert = true;
-    menuToggle?.setAttribute('aria-expanded', 'false');
-    menuToggle?.setAttribute('aria-label', 'Mở menu');
   });
 
   const filterToggle = document.querySelector('.filter-toggle');

@@ -10,7 +10,7 @@ const purchaseService = require('../services/purchase-service');
 const { lowStockThreshold } = require('../config');
 
 const router = express.Router();
-const render = (res, view, locals = {}) => res.render(path.join('admin', view), { admin: null, ...locals });
+const render = (res, view, locals = {}) => res.render(path.join('admin', view), { admin: null, error: null, ...locals });
 
 router.get('/login', (req, res) => {
   if (req.session.admin) return res.redirect('/admin');
@@ -32,14 +32,12 @@ router.get('/', requireAdmin, asyncRoute(async (req, res) => {
     activeProductsCount,
     lowStockCount,
     outOfStockCount,
-    totalCategories,
     totalCustomers,
     allOrders
   ] = await Promise.all([
     Product.countDocuments({ productStatus: 'PUBLISHED' }),
     Product.countDocuments({ productStatus: 'PUBLISHED', stock: { $gt: 0, $lte: lowStockThreshold } }),
     Product.countDocuments({ productStatus: 'PUBLISHED', stock: { $lte: 0 } }),
-    Category.countDocuments({ status: 'PUBLISHED' }),
     Customer.countDocuments(),
     Order.find().select('status paymentStatus totalAmount createdAt').lean()
   ]);
@@ -104,8 +102,7 @@ router.get('/', requireAdmin, asyncRoute(async (req, res) => {
       total: totalCustomers
     },
     products: {
-      active: activeProductsCount,
-      categories: totalCategories
+      active: activeProductsCount
     },
     inventory: {
       lowStock: lowStockCount,
@@ -116,7 +113,7 @@ router.get('/', requireAdmin, asyncRoute(async (req, res) => {
   render(res, 'dashboard', { admin: req.session.admin, stats });
 }));
 
-router.get('/categories', requireAdmin, (req, res) => render(res, 'categories', { admin: req.session.admin }));
+router.get('/categories', requireAdmin, (req, res) => res.redirect('/admin/products'));
 router.get('/products', requireAdmin, (req, res) => render(res, 'products', { admin: req.session.admin }));
 
 router.get('/orders', requireAdmin, asyncRoute(async (req, res) => {
@@ -127,7 +124,7 @@ router.get('/orders', requireAdmin, asyncRoute(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(100)
     .lean();
-  render(res, 'orders', { admin: req.session.admin, items });
+  render(res, 'orders', { admin: req.session.admin, error: null, items: items || [] });
 }));
 
 router.get('/customers', requireAdmin, (req, res) => render(res, 'customers', { admin: req.session.admin }));

@@ -83,7 +83,7 @@
         <article class="stat-card">
           <span>Sản phẩm Áo dài đang bán</span>
           <strong><%= stats.products?.active || 0 %></strong>
-          <small class="muted">Danh mục: Áo dài cách tân</small>
+          <small class="muted">Đang phân phối độc quyền</small>
         </article>
         <article class="stat-card <%= (stats.inventory?.lowStock || 0) > 0 ? 'warning' : '' %>">
           <span>Sắp hết hàng (≤ 10 chiếc)</span>
@@ -106,7 +106,6 @@
         <a class="admin-button" href="/admin/orders">Đơn hàng cần xử lý</a>
         <a class="admin-button" href="/admin/customers">Danh sách khách hàng</a>
         <a class="admin-button" href="/admin/reports">Báo cáo doanh thu chi tiết</a>
-        <a class="admin-button" href="/admin/categories">Cấu hình danh mục</a>
       </div>
     </section>
   </main>

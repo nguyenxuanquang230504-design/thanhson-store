@@ -121,3 +121,77 @@ td { font-size: 13px; }
   .variant-row .table-action { grid-column:1/-1; }
   .admin-login { padding: 26px; }
 }
+
+/* Order & Payment Status Badges */
+.order-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.order-badge.status-pending { background: #fff8e1; color: #b78103; border: 1px solid #ffe082; }
+.order-badge.status-confirmed { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.order-badge.status-processing { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.order-badge.status-shipped { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.order-badge.status-delivered { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.order-badge.status-cancelled { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+.pay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.pay-badge.pay-paid { background: #dcfce7; color: #166534; }
+.pay-badge.pay-pending { background: #fef3c7; color: #92400e; }
+.pay-badge.pay-failed { background: #fee2e2; color: #991b1b; }
+
+.order-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.order-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.order-filter-tab {
+  padding: 6px 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--admin-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.order-filter-tab:hover {
+  background: #f5f4f0;
+  color: var(--admin-ink);
+}
+.order-filter-tab.active {
+  background: var(--admin-ink);
+  border-color: var(--admin-ink);
+  color: #fff;
+}
+.order-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.order-filter-search input {
+  min-width: 240px;
+}

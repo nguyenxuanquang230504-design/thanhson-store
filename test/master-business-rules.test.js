@@ -155,3 +155,46 @@ test('Order detail page does not expose internal database metadata or secrets', 
   assert.match(html, /Áo dài cách tân hồng/);
   assert.doesNotMatch(html, /idempotencyKey|inventoryDeductedAt|guestAccessTokenHash|JSON\.stringify/);
 });
+
+test('Admin orders view renders safely without ReferenceError when error is omitted', async () => {
+  const sampleItems = [
+    {
+      id: 'HD-12345',
+      createdAt: new Date(),
+      status: 'pending',
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'pending',
+      customer: { customerName: 'Trần Văn B', phone: '0912345678', address: '123 Phố Huế, Hà Nội' },
+      items: [{ name: 'Áo dài cách tân lụa', qty: 1, size: 'M', color: 'Đỏ' }],
+      totalAmount: 450000,
+      statusHistory: [],
+      paymentHistory: []
+    }
+  ];
+
+  // Test rendering without passing error (simulating default render)
+  const html = await ejs.renderFile(path.join(__dirname, '..', 'views', 'admin', 'orders.ejs'), {
+    admin: { email: 'admin@thanhson.local', role: 'SUPER_ADMIN' },
+    items: sampleItems
+  });
+
+  assert.match(html, /HD-12345/);
+  assert.match(html, /Trần Văn B/);
+  assert.match(html, /Chờ xác nhận/);
+  assert.match(html, /Chuyển khoản VietQR/);
+  assert.doesNotMatch(html, /ReferenceError/);
+});
+
+test('Admin layout does not include categories link', async () => {
+  const html = await ejs.renderFile(path.join(__dirname, '..', 'views', 'admin', '_layout.ejs'), {
+    active: 'dashboard',
+    admin: { email: 'admin@thanhson.local', role: 'SUPER_ADMIN' }
+  });
+
+  assert.doesNotMatch(html, /\/admin\/categories/);
+  assert.match(html, /\/admin\/products/);
+  assert.match(html, /\/admin\/orders/);
+  assert.match(html, /\/admin\/customers/);
+  assert.match(html, /\/admin\/reports/);
+});
+

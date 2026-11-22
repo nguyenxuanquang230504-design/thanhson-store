@@ -6,6 +6,7 @@ const Category = require('../models/category');
 const Product = require('../models/product');
 const Order = require('../models/order');
 const Customer = require('../models/customer');
+const ExportJob = require('../models/export-job');
 const accountService = require('../services/account-service');
 const { isMongoConnected } = require('../lib/mongo');
 const { slugify, searchTokens } = require('../lib/search-text');
@@ -13,6 +14,12 @@ const { requireAdmin, requireRole, asyncRoute } = require('../middleware/admin-a
 const { getCloudinary, isCloudinaryConfigured } = require('../lib/cloudinary');
 const { lowStockThreshold } = require('../config');
 const purchaseService = require('../services/purchase-service');
+const { get_eligible_guest_customers } = require('../services/guest-eligibility-service');
+const { generateGuestArchiveWorkbook, validateWorkbookBuffer } = require('../services/excel-export-service');
+const fs = require('fs');
+const path = require('path');
+
+const EXPORTS_DIR = path.join(__dirname, '..', '..', 'data', 'exports');
 
 const router = express.Router();
 
@@ -632,6 +639,138 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
     orderStatuses: Object.values(statusMap),
     bestSellers: bestSellersAgg
   });
+}));
+
+// ==========================================
+// ADMIN EXPORT CENTER ENDPOINTS
+// ==========================================
+
+router.get('/export/stats', requireAdmin, asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  const result = await get_eligible_guest_customers();
+  res.json({ ok: true, summary: result.summary });
+}));
+
+router.get('/export/preview', requireAdmin, asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  const result = await get_eligible_guest_customers();
+  res.json({
+    ok: true,
+    summary: result.summary,
+    eligible: result.eligible.map(g => ({
+      customerId: g.customerId,
+      customerName: g.customerName,
+      phone: g.phone,
+      email: g.email,
+      address: g.address,
+      orderCount: g.orders.length,
+      orderIds: g.relatedOrderIds,
+      totalSpend: g.orders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0)
+    })),
+    ineligible: result.ineligible.map(g => ({
+      customerId: g.customerId,
+      customerName: g.customerName,
+      phone: g.phone,
+      orderCount: g.orders.length,
+      orderIds: g.relatedOrderIds,
+      reason: g.reason
+    }))
+  });
+}));
+
+router.post('/export/generate', requireAdmin, requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+
+  const result = await get_eligible_guest_customers();
+  const eligibleGuests = result.eligible;
+
+  const jobId = `EXP_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+  const generated = await generateGuestArchiveWorkbook(eligibleGuests, {
+    jobId,
+    adminEmail: req.session.admin.email,
+    adminRole: req.session.admin.role
+  });
+
+  // Validate workbook integrity before saving
+  const validation = await validateWorkbookBuffer(generated.buffer);
+
+  // Ensure export directory
+  if (!fs.existsSync(EXPORTS_DIR)) {
+    fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+  }
+
+  const filePath = path.join(EXPORTS_DIR, generated.filename);
+  fs.writeFileSync(filePath, generated.buffer);
+
+  // Record export job in MongoDB Atlas
+  const exportJob = new ExportJob({
+    jobId,
+    adminEmail: req.session.admin.email,
+    adminId: req.session.admin.id,
+    exportScope: 'ELIGIBLE_GUESTS_ONLY',
+    customerCount: generated.customerCount,
+    orderCount: generated.orderCount,
+    itemCount: generated.itemCount,
+    status: 'DOWNLOAD_READY',
+    checksumSha256: generated.sha256,
+    filename: generated.filename,
+    filePath,
+    fileSizeBytes: generated.buffer.length,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    validationLog: [
+      `Workbook validated with sheets: ${validation.sheetNames.join(', ')}`,
+      `Verified customer rows: ${validation.customersRows}, orders rows: ${validation.ordersRows}, item rows: ${validation.itemsRows}`,
+      `SHA-256 Checksum: ${generated.sha256}`
+    ]
+  });
+
+  await exportJob.save();
+
+  res.json({
+    ok: true,
+    jobId,
+    filename: generated.filename,
+    downloadUrl: `/api/admin/export/${jobId}/download`,
+    checksumSha256: generated.sha256,
+    customerCount: generated.customerCount,
+    orderCount: generated.orderCount,
+    itemCount: generated.itemCount,
+    fileSizeBytes: generated.buffer.length,
+    createdAt: exportJob.createdAt
+  });
+}));
+
+router.get('/export/:jobId/download', requireAdmin, asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  const jobId = String(req.params.jobId || '').trim();
+  const job = await ExportJob.findOne({ jobId });
+  if (!job) {
+    return res.status(404).json({ ok: false, message: 'Phiên xuất dữ liệu không tồn tại.' });
+  }
+
+  if (!fs.existsSync(job.filePath)) {
+    return res.status(404).json({ ok: false, message: 'Tệp xuất Excel đã hết hạn hoặc không còn trên máy chủ.' });
+  }
+
+  job.downloadCount += 1;
+  job.downloadStatus = 'DOWNLOADED';
+  job.downloadedAt = new Date();
+  job.status = 'COMPLETED';
+  await job.save();
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+  res.setHeader('Content-Length', job.fileSizeBytes);
+
+  const stream = fs.createReadStream(job.filePath);
+  stream.pipe(res);
+}));
+
+router.get('/export/history', requireAdmin, asyncRoute(async (req, res) => {
+  if (requireMongo(res)) return;
+  const jobs = await ExportJob.find().sort({ createdAt: -1 }).limit(50).lean();
+  res.json({ ok: true, jobs });
 }));
 
 module.exports = router;

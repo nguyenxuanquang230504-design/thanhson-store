@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trung tâm xuất Excel | Admin Thanh Sơn</title>
+  <link rel="stylesheet" href="/css/admin.css?v=20261124">
+  <style>
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--admin-line);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .stat-card .label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--admin-muted);
+      margin-bottom: 6px;
+    }
+    .stat-card .value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--admin-ink);
+      line-height: 1.1;
+    }
+    .stat-card.highlight {
+      border-color: #fbcfe8;
+      background: linear-gradient(135deg, #fff 0%, #fdf2f8 100%);
+    }
+    .stat-card.highlight .value {
+      color: #be185d;
+    }
+    .stat-card.success {
+      border-color: #bbf7d0;
+      background: linear-gradient(135deg, #fff 0%, #f0fdf4 100%);
+    }
+    .stat-card.success .value {
+      color: #15803d;
+    }
+
+    .config-card {
+      background: #fff;
+      border: 1px solid var(--admin-line);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+      background: #f9f9f7;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .config-item {
+      font-size: 13px;
+    }
+    .config-item strong {
+      display: block;
+      color: var(--admin-ink);
+      margin-bottom: 4px;
+    }
+    .config-item span {
+      color: var(--admin-muted);
+    }
+
+    /* Progress Stepper */
+    .progress-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 24px 0 16px;
+      padding: 16px 20px;
+      background: #fafaf9;
+      border-radius: 10px;
+      border: 1px solid #e7e5e4;
+      overflow-x: auto;
+    }
+    .step-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      flex: 1;
+      min-width: 120px;
+    }
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e7e5e4;
+      color: #78716c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+    }
+    .step-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #78716c;
+    }
+    .step-node.active .step-circle {
+      background: #ec496d;
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(236,73,109,0.2);
+    }
+    .step-node.active .step-label {
+      color: #ec496d;
+    }
+    .step-node.completed .step-circle {
+      background: #10b981;
+      color: #fff;
+    }
+    .step-node.completed .step-label {
+      color: #047857;
+    }
+    .step-node:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 16px;
+      left: calc(50% + 20px);
+      right: calc(-50% + 20px);
+      height: 2px;
+      background: #e7e5e4;
+      z-index: 1;
+    }
+    .step-node.completed:not(:last-child)::after {
+      background: #10b981;
+    }
+
+    .export-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .btn-export-primary {
+      background: #1c1c1a;
+      color: #fff;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .btn-export-primary:hover:not(:disabled) {
+      background: #383835;
+      transform: translateY(-1px);
+    }
+    .btn-export-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-export-secondary {
+      background: #fff;
+      color: var(--admin-ink);
+      border: 1px solid var(--admin-line);
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-export-secondary:hover {
+      background: #f5f4f0;
+    }
+
+    /* Modal */
+    .admin-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .admin-modal-backdrop[hidden] {
+      display: none !important;
+    }
+    .admin-modal-content {
+      background: #fff;
+      border-radius: 14px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+    }
+    .admin-modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--admin-line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .admin-modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--admin-line);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+    }
+    .modal-tab-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: none;
+      font-weight: 600;
+      font-size: 13px;
+      color: #6b7280;
+      cursor: pointer;
+    }
+    .modal-tab-btn.active {
+      background: #f3f4f6;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+    .sha-hash {
+      font-family: monospace;
+      font-size: 11px;
+      background: #f3f4f6;
+      padding: 3px 6px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body class="admin-shell">
+  <%- include('_layout', { active: 'export' }) %>
+
+  <main class="admin-main">
+    <header class="admin-top">
+      <div>
+        <p class="eyebrow">QUẢN LÝ DỮ LIỆU KHÁCH HÀNG</p>
+        <h1>Trung tâm xuất Excel (Export Center)</h1>
+        <p class="muted">Trích xuất tệp lưu trữ XLSX chuẩn hóa cho khách hàng vãng lai thỏa mãn toàn bộ điều kiện hoàn tất đơn hàng.</p>
+      </div>
+      <a class="admin-button" href="/admin">◫ Tổng quan CMS</a>
+    </header>
+
+    <div id="exportNotice" class="notice" hidden></div>
+
+    <!-- A. STATISTICS CARDS -->
+    <section class="export-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="label">Khách đã đăng ký</div>
+        <div class="value" id="statRegistered">—</div>
+        <small class="muted">Tài khoản thành viên (Loại trừ)</small>
+      </div>
+      <div class="stat-card">
+        <div class="label">Tổng khách vãng lai</div>
+        <div class="value" id="statTotalGuest">—</div>
+        <small class="muted">Nhóm theo số điện thoại</small>
+      </div>
+      <div class="stat-card highlight">
+        <div class="label">Đủ điều kiện xuất</div>
+        <div class="value" id="statEligible">—</div>
+        <small class="muted">100% đơn đã giao & thanh toán</small>
+      </div>
+      <div class="stat-card">
+        <div class="label">Đơn hàng liên quan</div>
+        <div class="value" id="statAssociatedOrders">—</div>
+        <small class="muted">Được gộp vào tệp lưu trữ</small>
+      </div>
+      <div class="stat-card">
+        <div class="label">Chưa đủ điều kiện</div>
+        <div class="value" id="statIneligible">—</div>
+        <small class="muted">Đơn đang xử lý hoặc chưa trả</small>
+      </div>
+      <div class="stat-card success">
+        <div class="label">Lần xuất thành công</div>
+        <div class="value" id="statSuccessExports">—</div>
+        <small class="muted">Đã tạo tệp & tải về máy</small>
+      </div>
+    </section>
+
+    <!-- B. EXPORT CONFIGURATION & CONTROLS -->
+    <section class="config-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <h2 style="font-size: 17px; margin: 0; color: var(--admin-ink);">Cấu hình xuất dữ liệu & Tải về cục bộ</h2>
+        <span class="order-badge status-delivered">🔒 Bảo toàn dữ liệu MongoDB (Không xóa / Không ẩn danh)</span>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-item">
+          <strong>Phạm vi trích xuất:</strong>
+          <span>Chỉ khách hàng vãng lai đủ điều kiện</span>
+        </div>
+        <div class="config-item">
+          <strong>Cấu trúc tệp Excel (XLSX):</strong>
+          <span>4 Trang tính: Customers, Orders, Order_Items, Archive_Log</span>
+        </div>
+        <div class="config-item">
+          <strong>Tiêu chuẩn an toàn:</strong>
+          <span>Chống Formula Injection; Mã băm SHA-256; Khóa tiêu đề</span>
+        </div>
+        <div class="config-item">
+          <strong>Nơi lưu trữ:</strong>
+          <span>Tải trực tiếp về máy tính cá nhân của Quản trị viên</span>
+        </div>
+      </div>
+
+      <!-- C. LIVE PROGRESS STEPPER -->
+      <div class="progress-stepper" id="progressStepper">
+        <div class="step-node active" id="step-READY">
+          <div class="step-circle">1</div>
+          <div class="step-label">Sẵn sàng</div>
+        </div>
+        <div class="step-node" id="step-EXPORTING">
+          <div class="step-circle">2</div>
+          <div class="step-label">Đang trích xuất</div>
+        </div>
+        <div class="step-node" id="step-VALIDATING">
+          <div class="step-circle">3</div>
+          <div class="step-label">Kiểm tra SHA-256</div>
+        </div>
+        <div class="step-node" id="step-DOWNLOAD_READY">
+          <div class="step-circle">4</div>
+          <div class="step-label">Sẵn sàng tải về</div>
+        </div>
+        <div class="step-node" id="step-COMPLETED">
+          <div class="step-circle">5</div>
+          <div class="step-label">Hoàn tất lưu trữ</div>
+        </div>
+      </div>
+
+      <div id="progressMessage" style="font-size: 13px; color: var(--admin-muted); text-align: center; margin-bottom: 8px;">
+        Hệ thống đã sẵn sàng trích xuất dữ liệu khách vãng lai hợp lệ.
+      </div>
+
+      <div class="export-actions">
+        <button id="btnGenerateExport" class="btn-export-primary" type="button">
+          <span>📥</span> Bắt đầu xuất tệp Excel
+        </button>
+        <button id="btnOpenPreview" class="btn-export-secondary" type="button">
+          <span>👁</span> Xem trước danh sách dữ liệu (Preview)
+        </button>
+        <button id="btnRefreshStats" class="btn-export-secondary" type="button">
+          <span>🔄</span> Làm mới thống kê
+        </button>
+      </div>
+    </section>
+
+    <!-- E. EXPORT HISTORY TABLE -->
+    <section class="admin-panel">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 16px; margin: 0; color: var(--admin-ink);">Nhật ký xuất tệp Excel (Export History)</h2>
+        <span class="muted" style="font-size: 13px;">Lưu trữ tối đa 50 phiên xuất gần nhất</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mã phiên (Job ID)</th>
+              <th>Thời gian xuất</th>
+              <th>Quản trị viên</th>
+              <th>Khách / Đơn / Dòng SP</th>
+              <th>Kích thước</th>
+              <th>Mã băm SHA-256</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="historyRows">
+            <tr><td colspan="8" style="text-align: center; padding: 20px;" class="muted">Đang tải lịch sử xuất...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- F. PREVIEW MODAL -->
+  <div id="previewModal" class="admin-modal-backdrop" hidden>
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">
+        <h3 style="margin: 0; font-size: 16px; color: var(--admin-ink);">Xem trước dữ liệu khách hàng vãng lai</h3>
+        <button type="button" id="btnClosePreview" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #9ca3af;">✕</button>
+      </div>
+
+      <div class="admin-modal-body">
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab-btn active" id="tabEligibleBtn">Khách đủ điều kiện (<span id="previewEligibleCount">0</span>)</button>
+          <button type="button" class="modal-tab-btn" id="tabIneligibleBtn">Khách chưa đủ điều kiện (<span id="previewIneligibleCount">0</span>)</button>
+        </div>
+
+        <div id="previewEligibleView">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã khách</th>
+                  <th>Tên khách hàng</th>
+                  <th>Số điện thoại</th>
+                  <th>Địa chỉ</th>
+                  <th>Số đơn</th>
+                  <th>Tổng tiền</th>
+                </tr>
+              </thead>
+              <tbody id="previewEligibleRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="previewIneligibleView" hidden>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã khách</th>
+                  <th>Tên khách hàng</th>
+                  <th>Số điện thoại</th>
+                  <th>Số đơn</th>
+                  <th>Lý do chưa đủ điều kiện lưu trữ</th>
+                </tr>
+              </thead>
+              <tbody id="previewIneligibleRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-modal-footer">
+        <button type="button" class="btn-export-secondary" id="btnClosePreviewFooter">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const notice = document.getElementById('exportNotice');
+      const btnGenerate = document.getElementById('btnGenerateExport');
+      const btnPreview = document.getElementById('btnOpenPreview');
+      const btnRefresh = document.getElementById('btnRefreshStats');
+      const progressMessage = document.getElementById('progressMessage');
+      const historyRows = document.getElementById('historyRows');
+
+      const previewModal = document.getElementById('previewModal');
+      const btnClosePreview = document.getElementById('btnClosePreview');
+      const btnClosePreviewFooter = document.getElementById('btnClosePreviewFooter');
+      const tabEligibleBtn = document.getElementById('tabEligibleBtn');
+      const tabIneligibleBtn = document.getElementById('tabIneligibleBtn');
+      const previewEligibleView = document.getElementById('previewEligibleView');
+      const previewIneligibleView = document.getElementById('previewIneligibleView');
+
+      let previewData = null;
+
+      function showNotice(text, isError = false) {
+        notice.hidden = false;
+        notice.className = `notice${isError ? ' error' : ''}`;
+        notice.textContent = text;
+      }
+
+      function setStep(step) {
+        const order = ['READY', 'EXPORTING', 'VALIDATING', 'DOWNLOAD_READY', 'COMPLETED'];
+        const targetIndex = order.indexOf(step);
+        order.forEach((s, idx) => {
+          const el = document.getElementById(`step-${s}`);
+          if (!el) return;
+          el.classList.remove('active', 'completed');
+          if (idx < targetIndex) {
+            el.classList.add('completed');
+          } else if (idx === targetIndex) {
+            el.classList.add('active');
+          }
+        });
+      }
+
+      async function loadStats() {
+        try {
+          const res = await fetch('/api/admin/export/stats');
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.message || 'Không thể tải thống kê.');
+
+          const s = data.summary;
+          document.getElementById('statRegistered').textContent = s.totalRegisteredCustomers.toLocaleString('vi-VN');
+          document.getElementById('statTotalGuest').textContent = s.totalGuestCustomers.toLocaleString('vi-VN');
+          document.getElementById('statEligible').textContent = s.eligibleGuestCustomers.toLocaleString('vi-VN');
+          document.getElementById('statAssociatedOrders').textContent = s.associatedEligibleOrders.toLocaleString('vi-VN');
+          document.getElementById('statIneligible').textContent = s.ineligibleGuestCustomers.toLocaleString('vi-VN');
+          document.getElementById('statSuccessExports').textContent = s.totalSuccessfulExports.toLocaleString('vi-VN');
+        } catch (err) {
+          showNotice(err.message, true);
+        }
+      }
+
+      async function loadHistory() {
+        try {
+          const res = await fetch('/api/admin/export/history');
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.message || 'Không thể tải lịch sử xuất.');
+
+          historyRows.innerHTML = '';
+          if (!data.jobs || !data.jobs.length) {
+            historyRows.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;" class="muted">Chưa có phiên xuất dữ liệu nào.</td></tr>';
+            return;
+          }
+
+          data.jobs.forEach(job => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(job.createdAt).toLocaleString('vi-VN');
+            const sizeKb = (job.fileSizeBytes / 1024).toFixed(1) + ' KB';
+            const statusMap = {
+              READY: 'Sẵn sàng',
+              EXPORTING: 'Đang xuất',
+              VALIDATING: 'Đang kiểm tra',
+              DOWNLOAD_READY: 'Sẵn sàng tải',
+              DOWNLOAD_INITIATED: 'Đang tải',
+              COMPLETED: 'Đã hoàn tất',
+              FAILED: 'Thất bại'
+            };
+
+            tr.innerHTML = `
+              <td><strong>${job.jobId}</strong><br><small class="muted">${job.filename}</small></td>
+              <td>${dateStr}</td>
+              <td>${job.adminEmail}</td>
+              <td><strong>${job.customerCount}</strong> KH · <strong>${job.orderCount}</strong> đơn · <strong>${job.itemCount || 0}</strong> SP</td>
+              <td>${sizeKb}</td>
+              <td><span class="sha-hash" title="${job.checksumSha256}">${(job.checksumSha256 || '—').substring(0, 16)}...</span></td>
+              <td><span class="order-badge ${job.status === 'COMPLETED' ? 'status-delivered' : 'status-confirmed'}">${statusMap[job.status] || job.status}</span></td>
+              <td>
+                <a class="table-action" href="/api/admin/export/${job.jobId}/download" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  📥 Tải lại
+                </a>
+              </td>
+            `;
+            historyRows.appendChild(tr);
+          });
+        } catch (err) {
+          showNotice(err.message, true);
+        }
+      }
+
+      async function generateExport() {
+        btnGenerate.disabled = true;
+        setStep('EXPORTING');
+        progressMessage.textContent = 'Hệ thống đang trích xuất dữ liệu khách vãng lai và truy vấn đơn hàng tương ứng...';
+
+        try {
+          // Visual progression
+          setTimeout(() => {
+            setStep('VALIDATING');
+            progressMessage.textContent = 'Đang khởi tạo 4 trang tính Excel, kiểm tra toàn vẹn và tính toán mã băm SHA-256...';
+          }, 400);
+
+          const res = await fetch('/api/admin/export/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.message || 'Không thể tạo tệp xuất dữ liệu.');
+
+          setStep('DOWNLOAD_READY');
+          progressMessage.textContent = `Tệp ${data.filename} đã sẵn sàng. Đang kích hoạt tải xuống máy tính...`;
+
+          // Trigger download
+          const link = document.createElement('a');
+          link.href = data.downloadUrl;
+          link.setAttribute('download', data.filename);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          setTimeout(() => {
+            setStep('COMPLETED');
+            progressMessage.textContent = `Đã tải xuống thành công tệp ${data.filename} (SHA-256: ${data.checksumSha256.substring(0, 16)}...).`;
+            showNotice(`Đã xuất thành công ${data.customerCount} khách hàng vãng lai (${data.orderCount} đơn hàng) vào tệp Excel.`);
+            loadStats();
+            loadHistory();
+            btnGenerate.disabled = false;
+          }, 800);
+
+        } catch (err) {
+          setStep('READY');
+          progressMessage.textContent = 'Quá trình xuất tệp thất bại.';
+          showNotice(err.message, true);
+          btnGenerate.disabled = false;
+        }
+      }
+
+      async function openPreview() {
+        previewModal.hidden = false;
+        try {
+          const res = await fetch('/api/admin/export/preview');
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.message || 'Không thể tải danh sách xem trước.');
+
+          previewData = data;
+          document.getElementById('previewEligibleCount').textContent = data.eligible.length;
+          document.getElementById('previewIneligibleCount').textContent = data.ineligible.length;
+
+          renderPreview();
+        } catch (err) {
+          showNotice(err.message, true);
+        }
+      }
+
+      function renderPreview() {
+        if (!previewData) return;
+
+        // Render eligible
+        const eligibleTbody = document.getElementById('previewEligibleRows');
+        eligibleTbody.innerHTML = '';
+        if (!previewData.eligible.length) {
+          eligibleTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 16px;" class="muted">Không có khách hàng vãng lai nào đủ điều kiện lưu trữ tại thời điểm này.</td></tr>';
+        } else {
+          previewData.eligible.forEach(g => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong>${g.customerId}</strong></td>
+              <td>${g.customerName}</td>
+              <td>${g.phone}</td>
+              <td><small>${g.address || '—'}</small></td>
+              <td><strong>${g.orderCount}</strong> (${g.orderIds.join(', ')})</td>
+              <td><strong>${Number(g.totalSpend || 0).toLocaleString('vi-VN')} ₫</strong></td>
+            `;
+            eligibleTbody.appendChild(tr);
+          });
+        }
+
+        // Render ineligible
+        const ineligibleTbody = document.getElementById('previewIneligibleRows');
+        ineligibleTbody.innerHTML = '';
+        if (!previewData.ineligible.length) {
+          ineligibleTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 16px;" class="muted">Tất cả khách hàng vãng lai đều đã thỏa điều kiện.</td></tr>';
+        } else {
+          previewData.ineligible.forEach(g => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong>${g.customerId}</strong></td>
+              <td>${g.customerName}</td>
+              <td>${g.phone}</td>
+              <td><strong>${g.orderCount}</strong> (${g.orderIds.join(', ')})</td>
+              <td><span style="color: #b91c1c; font-size: 12px;">${g.reason}</span></td>
+            `;
+            ineligibleTbody.appendChild(tr);
+          });
+        }
+      }
+
+      function closePreviewModal() {
+        previewModal.hidden = true;
+      }
+
+      // Tab switching in Preview modal
+      tabEligibleBtn.addEventListener('click', () => {
+        tabEligibleBtn.classList.add('active');
+        tabIneligibleBtn.classList.remove('active');
+        previewEligibleView.hidden = false;
+        previewIneligibleView.hidden = true;
+      });
+
+      tabIneligibleBtn.addEventListener('click', () => {
+        tabIneligibleBtn.classList.add('active');
+        tabEligibleBtn.classList.remove('active');
+        previewIneligibleView.hidden = false;
+        previewEligibleView.hidden = true;
+      });
+
+      btnGenerate.addEventListener('click', generateExport);
+      btnPreview.addEventListener('click', openPreview);
+      btnRefresh.addEventListener('click', () => {
+        loadStats();
+        loadHistory();
+        showNotice('Đã cập nhật số liệu mới nhất từ MongoDB Atlas.');
+      });
+
+      btnClosePreview.addEventListener('click', closePreviewModal);
+      btnClosePreviewFooter.addEventListener('click', closePreviewModal);
+
+      // Initialize
+      loadStats();
+      loadHistory();
+    })();
+  </script>
+</body>
+</html>

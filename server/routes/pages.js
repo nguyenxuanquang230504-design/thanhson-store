@@ -89,6 +89,9 @@ router.get('/health', (req, res) => {
 });
 
 router.get(['/dang-nhap', '/tai-khoan'], asyncRoute(async (req, res) => {
+  if (req.session.admin) {
+    return res.redirect('/admin');
+  }
   let userOrders = [];
   if (req.session.user) {
     const user = req.session.user;

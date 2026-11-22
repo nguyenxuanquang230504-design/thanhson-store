@@ -118,7 +118,11 @@ router.get('/products', requireAdmin, (req, res) => render(res, 'products', { ad
 
 router.get('/orders', requireAdmin, asyncRoute(async (req, res) => {
   if (!isMongoConnected()) return render(res, 'orders', { admin: req.session.admin, error: 'MongoDB chưa kết nối. Không thể tải đơn hàng.' });
-  await purchaseService.expirePendingMongoOrders();
+  try {
+    await purchaseService.expirePendingMongoOrders();
+  } catch (expireErr) {
+    console.warn('Orders page: expirePendingMongoOrders warning:', expireErr.message);
+  }
   const items = await Order.find()
     .select('id createdAt status statusHistory paymentMethod paymentStatus paymentHistory inventoryDeductedAt inventoryRestoredAt customer items totalAmount')
     .sort({ createdAt: -1 })
@@ -128,6 +132,7 @@ router.get('/orders', requireAdmin, asyncRoute(async (req, res) => {
 }));
 
 router.get('/customers', requireAdmin, (req, res) => render(res, 'customers', { admin: req.session.admin }));
+router.get('/export', requireAdmin, (req, res) => render(res, 'export', { admin: req.session.admin, active: 'export' }));
 router.get('/reports', requireAdmin, (req, res) => render(res, 'reports', { admin: req.session.admin }));
 
 module.exports = router;

@@ -16,7 +16,11 @@ async function authenticate(username, password) {
 
   if (isMongoConnected()) {
     // 1. Check if an Admin user is logging in
-    const adminUser = await AdminUser.findOne({ email: normalized, accountStatus: 'ACTIVE' });
+    const adminConditions = [{ email: normalized }];
+    if (normalized === 'admin') {
+      adminConditions.push({ email: 'admin@thanhson.local' });
+    }
+    const adminUser = await AdminUser.findOne({ $or: adminConditions, accountStatus: 'ACTIVE' });
     if (adminUser) {
       const valid = await bcrypt.compare(password, adminUser.passwordHash);
       if (!valid) {

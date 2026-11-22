@@ -2,6 +2,7 @@ const { readJson, writeJson } = require('../lib/json-store');
 const { usersFile } = require('../config');
 const { isMongoConnected } = require('../lib/mongo');
 const Customer = require('../models/customer');
+const AdminUser = require('../models/admin-user');
 const Order = require('../models/order');
 const bcrypt = require('bcryptjs');
 
@@ -14,7 +15,27 @@ async function authenticate(username, password) {
   const normalized = String(username || '').trim().toLowerCase();
 
   if (isMongoConnected()) {
-    const customer = await Customer.findOne({ username: normalized });
+    // 1. Check if an Admin user is attempting to log in on the customer portal
+    const adminUser = await AdminUser.findOne({ email: normalized });
+    if (adminUser) {
+      return {
+        ok: false,
+        status: 400,
+        isAdmin: true,
+        redirect: '/admin/login',
+        message: `Tài khoản "${username}" là tài khoản Quản trị viên (Admin). Vui lòng đăng nhập tại trang quản trị: /admin/login`
+      };
+    }
+
+    // 2. Find customer by username, phone, or email
+    const customer = await Customer.findOne({
+      $or: [
+        { username: normalized },
+        { phone: normalized },
+        { email: normalized }
+      ]
+    });
+
     if (!customer) {
       return { ok: false, status: 404, message: 'Tài khoản chưa tồn tại. Vui lòng đăng ký trước.' };
     }

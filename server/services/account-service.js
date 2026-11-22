@@ -15,15 +15,25 @@ async function authenticate(username, password) {
   const normalized = String(username || '').trim().toLowerCase();
 
   if (isMongoConnected()) {
-    // 1. Check if an Admin user is attempting to log in on the customer portal
-    const adminUser = await AdminUser.findOne({ email: normalized });
+    // 1. Check if an Admin user is logging in
+    const adminUser = await AdminUser.findOne({ email: normalized, accountStatus: 'ACTIVE' });
     if (adminUser) {
+      const valid = await bcrypt.compare(password, adminUser.passwordHash);
+      if (!valid) {
+        return { ok: false, status: 401, message: 'Sai mật khẩu quản trị viên.' };
+      }
+      adminUser.lastLoginAt = new Date();
+      await adminUser.save();
       return {
-        ok: false,
-        status: 400,
+        ok: true,
         isAdmin: true,
-        redirect: '/admin/login',
-        message: `Tài khoản "${username}" là tài khoản Quản trị viên (Admin). Vui lòng đăng nhập tại trang quản trị: /admin/login`
+        redirect: adminUser.mustChangePassword ? '/admin/change-password' : '/admin',
+        adminSession: {
+          id: String(adminUser._id),
+          email: adminUser.email,
+          role: adminUser.role,
+          mustChangePassword: adminUser.mustChangePassword
+        }
       };
     }
 

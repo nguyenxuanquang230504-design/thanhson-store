@@ -121,9 +121,6 @@
             <button class="btn" type="submit">Đăng nhập</button>
           </div>
           <p class="auth-switch">Chưa có tài khoản? <a href="/dang-ky">Đăng ký thành viên (Giảm ngay 15%)</a></p>
-          <p class="auth-switch" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #eee;">
-            <a href="/admin/login" style="color: #ec496d; font-weight: 600;">🔒 Đăng nhập trang Quản trị viên (Admin) →</a>
-          </p>
         </form>
       <% } %>
     </div>
@@ -148,12 +145,15 @@
         const result = await res.json();
         if (!result.ok) {
           if (result.isAdmin && result.redirect) {
-            if (confirm(result.message + '\n\nBạn có muốn chuyển sang trang Đăng nhập Quản trị viên (/admin/login) ngay bây giờ không?')) {
-              window.location.href = result.redirect;
-            }
+            window.location.href = result.redirect;
             return;
           }
           alert(result.message || 'Đăng nhập thất bại.');
+          return;
+        }
+
+        if (result.isAdmin && result.redirect) {
+          window.location.href = result.redirect;
           return;
         }
 

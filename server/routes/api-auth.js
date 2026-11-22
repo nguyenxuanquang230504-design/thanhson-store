@@ -14,6 +14,19 @@ router.post('/login', async (req, res) => {
     const result = await accountService.authenticate(username, password);
     if (!result.ok) return res.status(result.status || 400).json(result);
 
+    if (result.isAdmin) {
+      if (result.adminSession) {
+        req.session.admin = result.adminSession;
+        await new Promise((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
+      }
+      return res.json({
+        ok: true,
+        isAdmin: true,
+        redirect: result.redirect || '/admin',
+        message: 'Đăng nhập Quản trị viên thành công.'
+      });
+    }
+
     const guestWishlist = Array.isArray(req.session.wishlist) ? req.session.wishlist : [];
     result.user.wishlist = [...new Set([...guestWishlist, ...(result.user.wishlist || [])])];
     await accountService.updateWishlist(username, result.user.wishlist);

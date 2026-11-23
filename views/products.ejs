@@ -131,15 +131,6 @@
               <label><input type="radio" name="color" value="Xanh ngọc" <%= color==='Xanh ngọc'?'checked':'' %> onchange="this.form.submit()"> Xanh ngọc</label>
             </div>
           </fieldset>
-
-          <!-- Availability Filter -->
-          <fieldset class="attr-filter">
-            <legend>Tình trạng kho hàng</legend>
-            <label class="checkbox-label">
-              <input type="checkbox" name="availableOnly" value="true" <%= availableOnly==='true'?'checked':'' %> onchange="this.form.submit()">
-              <span>Chỉ hiển thị sản phẩm còn hàng</span>
-            </label>
-          </fieldset>
         </form>
       </aside>
 
@@ -158,7 +149,6 @@
             <% if (color) { %><input type="hidden" name="color" value="<%= color %>"><% } %>
             <% if (material) { %><input type="hidden" name="material" value="<%= material %>"><% } %>
             <% if (designStyle) { %><input type="hidden" name="designStyle" value="<%= designStyle %>"><% } %>
-            <% if (availableOnly) { %><input type="hidden" name="availableOnly" value="<%= availableOnly %>"><% } %>
             <% if (typeof collection !== 'undefined' && collection) { %><input type="hidden" name="collection" value="<%= collection %>"><% } %>
             <% if (typeof sale !== 'undefined' && sale) { %><input type="hidden" name="sale" value="<%= sale %>"><% } %>
 

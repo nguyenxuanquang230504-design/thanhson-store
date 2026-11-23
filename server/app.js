@@ -1,6 +1,7 @@
 const express = require('express');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const connectMongoSession = require('connect-mongo');
+const MongoStore = connectMongoSession.MongoStore || connectMongoSession.default || connectMongoSession;
 const path = require('path');
 const config = require('./config');
 const { ensureJsonFile } = require('./lib/json-store');

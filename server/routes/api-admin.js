@@ -117,8 +117,10 @@ router.post('/images', requireAdmin, requireRole('SUPER_ADMIN', 'ADMIN'), asyncR
       }).end(buffer);
     });
     res.status(201).json({ ok: true, image: uploaded.secure_url, publicId: uploaded.public_id });
-  } catch (_) {
-    res.status(502).json({ ok: false, message: 'Cloudinary từ chối tải ảnh. Kiểm tra API credentials.' });
+  } catch (uploadErr) {
+    console.error('Cloudinary upload error:', uploadErr?.message || uploadErr);
+    const detail = uploadErr?.message ? ` (${uploadErr.message})` : '';
+    res.status(502).json({ ok: false, message: `Cloudinary từ chối tải ảnh${detail}. Kiểm tra API credentials.` });
   }
 }));
 

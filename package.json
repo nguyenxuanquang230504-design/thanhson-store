@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "migrate": "node scripts/migrate.js",
-    "test": "node --test",
+    "test": "node --test --test-concurrency=1",
     "seed:admin": "node scripts/seed-admin.js",
     "import:products": "node scripts/import-products.js"
   },

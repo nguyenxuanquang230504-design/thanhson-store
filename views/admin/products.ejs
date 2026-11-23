@@ -342,18 +342,30 @@
           const tr = document.createElement('tr');
           tr.dataset.productId = p._id;
 
-          // 1. Hình ảnh & Tên sản phẩm
-          const nameCell = document.createElement('td');
-          nameCell.className = 'product-name-cell';
+          // 1. Hình ảnh sản phẩm
+          const imgCell = document.createElement('td');
+          imgCell.className = 'product-img-cell';
+          imgCell.setAttribute('data-label', 'Hình ảnh');
           if (p.image) {
             const img = document.createElement('img');
             img.src = p.image;
             img.alt = p.name;
-            nameCell.appendChild(img);
+            img.className = 'product-thumb';
+            imgCell.appendChild(img);
+          } else {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'product-thumb-placeholder';
+            placeholder.textContent = '🖼️';
+            imgCell.appendChild(placeholder);
           }
-          const title = document.createElement('span');
+          tr.appendChild(imgCell);
+
+          // 2. Tên sản phẩm
+          const nameCell = document.createElement('td');
+          nameCell.className = 'product-name-cell';
+          nameCell.setAttribute('data-label', 'Tên sản phẩm');
+          const title = document.createElement('strong');
           title.textContent = p.name;
-          title.style.fontWeight = '600';
           nameCell.appendChild(title);
           tr.appendChild(nameCell);
 

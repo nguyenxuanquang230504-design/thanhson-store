@@ -1,11 +1,18 @@
 {
   "version": 2,
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "views/**,public/**"
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["views/**", "public/**"]
+      }
     }
-  },
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index.js" }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
   ]
 }

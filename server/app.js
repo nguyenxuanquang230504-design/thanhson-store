@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const path = require('path');
 const config = require('./config');
 const { ensureJsonFile } = require('./lib/json-store');
@@ -43,12 +44,22 @@ app.disable('x-powered-by');
 app.use(securityHeaders);
 app.use(requireSafeOrigin);
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
-app.use(session({
+const sessionOptions = {
   secret: config.sessionSecret || 'development-only-session-secret',
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, sameSite: 'lax', secure: config.nodeEnv === 'production', maxAge: 1000 * 60 * 60 * 24 * 7 }
-}));
+};
+
+if (config.mongoDbUri) {
+  sessionOptions.store = MongoStore.create({
+    mongoUrl: config.mongoDbUri,
+    ttl: 7 * 24 * 60 * 60,
+    touchAfter: 24 * 3600
+  });
+}
+
+app.use(session(sessionOptions));
 app.use(viewLocals);
 
 app.use('/api/products', require('./routes/api-products'));

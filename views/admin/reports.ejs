@@ -11,6 +11,7 @@
   <main class="admin-main">
     <header class="admin-top">
       <div>
+        <nav class="admin-breadcrumb"><a href="/admin">Admin</a> <span class="sep">/</span> <span class="current">Báo cáo doanh thu</span></nav>
         <p class="eyebrow">BÁO CÁO TÀI CHÍNH</p>
         <h1>Báo cáo doanh thu & kinh doanh</h1>
         <p class="muted">Số liệu thực tế từ các đơn hàng đã thanh toán và hoàn tất.</p>
@@ -20,6 +21,17 @@
       </div>
     </header>
 
+    <!-- Time Range Filter -->
+    <div class="order-filter-bar" style="margin-bottom: 20px;">
+      <div class="order-filter-tabs" id="rangeFilterTabs">
+        <button class="order-filter-tab active" type="button" data-range="all">Tất cả thời gian</button>
+        <button class="order-filter-tab" type="button" data-range="today">Hôm nay</button>
+        <button class="order-filter-tab" type="button" data-range="7d">7 ngày qua</button>
+        <button class="order-filter-tab" type="button" data-range="30d">30 ngày qua</button>
+      </div>
+    </div>
+
+    <!-- 4 KPI Cards Grid (Desktop: 4 columns, Tablet: 2 columns, Mobile: 1 column) -->
     <section class="stat-grid" id="summaryStats">
       <article class="stat-card">
         <span>Doanh thu thực tế (Đã thu)</span>
@@ -34,51 +46,57 @@
         <strong id="statRevenueMonth">0 ₫</strong>
       </article>
       <article class="stat-card">
-        <span>Giá trị đơn trung bình (AOV)</span>
+        <span>Giá trị đơn TB (AOV)</span>
         <strong id="statAov">0 ₫</strong>
       </article>
     </section>
 
     <div class="admin-grid-2">
+      <!-- Phân tích theo phương thức thanh toán -->
       <section class="admin-panel">
         <h2>Phân tích theo phương thức thanh toán</h2>
+        <p class="muted" style="margin: -4px 0 14px; font-size: 13px;">Tách bạch số đơn đã thanh toán thực tế và tổng số đơn được tạo.</p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Phương thức</th>
-                <th>Số lượng đơn</th>
-                <th>Doanh thu đã thu</th>
-                <th>Tỷ lệ</th>
+                <th style="text-align: center;">Đơn đã thanh toán</th>
+                <th style="text-align: center;">Tổng đơn tạo</th>
+                <th style="text-align: right;">Doanh thu đã thu</th>
+                <th style="text-align: right;">Tỷ lệ thành công</th>
               </tr>
             </thead>
             <tbody id="paymentMethodRows">
-              <tr><td colspan="4">Đang tính toán...</td></tr>
+              <tr class="skeleton-row"><td colspan="5"><div class="skeleton-bar" style="width: 80%;"></div></td></tr>
             </tbody>
           </table>
         </div>
       </section>
 
+      <!-- Tình trạng đơn hàng & Hủy đơn -->
       <section class="admin-panel">
         <h2>Tình trạng đơn hàng & Hủy đơn</h2>
+        <p class="muted" style="margin: -4px 0 14px; font-size: 13px;">Theo dõi tiến độ fulfillment và tỷ lệ hủy đơn.</p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Trạng thái</th>
-                <th>Số đơn</th>
-                <th>Giá trị</th>
+                <th style="text-align: center;">Số đơn</th>
+                <th style="text-align: right;">Giá trị</th>
               </tr>
             </thead>
             <tbody id="orderStatusRows">
-              <tr><td colspan="3">Đang tính toán...</td></tr>
+              <tr class="skeleton-row"><td colspan="3"><div class="skeleton-bar" style="width: 80%;"></div></td></tr>
             </tbody>
           </table>
         </div>
       </section>
     </div>
 
-    <section class="admin-panel">
+    <!-- Top Sellers -->
+    <section class="admin-panel" style="margin-top: 24px;">
       <h2>Sản phẩm bán chạy nhất (Top Sellers)</h2>
       <div class="table-wrap">
         <table>
@@ -86,12 +104,12 @@
             <tr>
               <th>Sản phẩm</th>
               <th>SKU</th>
-              <th>Số lượng bán</th>
-              <th>Tổng doanh thu</th>
+              <th style="text-align: center;">Số lượng bán</th>
+              <th style="text-align: right;">Tổng doanh thu</th>
             </tr>
           </thead>
           <tbody id="bestSellersRows">
-            <tr><td colspan="4">Đang tính toán...</td></tr>
+            <tr class="skeleton-row"><td colspan="4"><div class="skeleton-bar" style="width: 80%;"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -100,76 +118,100 @@
 
   <script src="/js/admin.js"></script>
   <script>
-    (async () => {
-      try {
-        const res = await fetch('/api/admin/reports');
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Không thể tải báo cáo.');
+    (() => {
+      let currentRange = 'all';
 
-        document.getElementById('statPaidRevenue').textContent = Number(data.totalPaidRevenue || 0).toLocaleString('vi-VN') + ' ₫';
-        document.getElementById('statRevenueToday').textContent = Number(data.revenueToday || 0).toLocaleString('vi-VN') + ' ₫';
-        document.getElementById('statRevenueMonth').textContent = Number(data.revenueThisMonth || 0).toLocaleString('vi-VN') + ' ₫';
-        document.getElementById('statAov').textContent = Number(data.aov || 0).toLocaleString('vi-VN') + ' ₫';
-
-        // Payment methods
+      async function fetchReports(range = 'all') {
         const pmBody = document.getElementById('paymentMethodRows');
-        pmBody.replaceChildren();
-        const totalRev = Number(data.totalPaidRevenue || 1);
-        (data.paymentMethods || []).forEach(pm => {
-          const tr = document.createElement('tr');
-          const pct = Math.round((Number(pm.revenue || 0) / (totalRev || 1)) * 100);
-          tr.innerHTML = `
-            <td><strong>${pm.method === 'bank_transfer' ? 'Chuyển khoản VietQR' : 'Thanh toán COD'}</strong></td>
-            <td>${pm.count} đơn</td>
-            <td>${Number(pm.revenue || 0).toLocaleString('vi-VN')} ₫</td>
-            <td><span class="badge ${pct > 0 ? 'success' : 'muted'}">${pct}%</span></td>
-          `;
-          pmBody.appendChild(tr);
-        });
-
-        // Order statuses
         const statusBody = document.getElementById('orderStatusRows');
-        statusBody.replaceChildren();
-        const statusLabels = {
-          pending: 'Chờ xử lý',
-          confirmed: 'Đã xác nhận',
-          processing: 'Đang chuẩn bị',
-          shipped: 'Đang giao hàng',
-          delivered: 'Đã giao hàng',
-          cancelled: 'Đã hủy',
-          failed: 'Thất bại'
-        };
-        (data.orderStatuses || []).forEach(st => {
-          const tr = document.createElement('tr');
-          const isCancel = st.status === 'cancelled' || st.status === 'failed';
-          tr.innerHTML = `
-            <td><span class="badge ${isCancel ? 'error' : 'info'}">${statusLabels[st.status] || st.status}</span></td>
-            <td>${st.count} đơn</td>
-            <td>${Number(st.value || 0).toLocaleString('vi-VN')} ₫</td>
-          `;
-          statusBody.appendChild(tr);
-        });
-
-        // Best sellers
         const bsBody = document.getElementById('bestSellersRows');
-        bsBody.replaceChildren();
-        if (!data.bestSellers || !data.bestSellers.length) {
-          bsBody.innerHTML = '<tr><td colspan="4">Chưa có dữ liệu sản phẩm bán ra.</td></tr>';
-        } else {
-          data.bestSellers.forEach(bs => {
+
+        pmBody.innerHTML = '<tr class="skeleton-row"><td colspan="5"><div class="skeleton-bar" style="width:80%;"></div></td></tr>';
+        statusBody.innerHTML = '<tr class="skeleton-row"><td colspan="3"><div class="skeleton-bar" style="width:80%;"></div></td></tr>';
+        bsBody.innerHTML = '<tr class="skeleton-row"><td colspan="4"><div class="skeleton-bar" style="width:80%;"></div></td></tr>';
+
+        try {
+          const res = await fetch(`/api/admin/reports?range=${encodeURIComponent(range)}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || 'Không thể tải báo cáo.');
+
+          document.getElementById('statPaidRevenue').textContent = Number(data.totalPaidRevenue || 0).toLocaleString('vi-VN') + ' ₫';
+          document.getElementById('statRevenueToday').textContent = Number(data.revenueToday || 0).toLocaleString('vi-VN') + ' ₫';
+          document.getElementById('statRevenueMonth').textContent = Number(data.revenueThisMonth || 0).toLocaleString('vi-VN') + ' ₫';
+          document.getElementById('statAov').textContent = Number(data.aov || 0).toLocaleString('vi-VN') + ' ₫';
+
+          // Payment methods
+          pmBody.replaceChildren();
+          (data.paymentMethods || []).forEach(pm => {
             const tr = document.createElement('tr');
+            const total = pm.totalCount || 0;
+            const paid = pm.paidCount || 0;
+            const rate = total > 0 ? Math.round((paid / total) * 100) : 0;
             tr.innerHTML = `
-              <td><strong>${bs.name}</strong></td>
-              <td>${bs.sku || '—'}</td>
-              <td><strong>${bs.quantity}</strong> chiếc</td>
-              <td>${Number(bs.revenue || 0).toLocaleString('vi-VN')} ₫</td>
+              <td><strong>${pm.method === 'bank_transfer' ? 'Chuyển khoản VietQR' : 'Thanh toán COD'}</strong></td>
+              <td style="text-align: center;"><strong style="color: #16a34a;">${paid}</strong> đơn</td>
+              <td style="text-align: center;">${total} đơn</td>
+              <td style="text-align: right;"><strong style="color: var(--admin-ink);">${Number(pm.revenue || 0).toLocaleString('vi-VN')} ₫</strong></td>
+              <td style="text-align: right;"><span class="badge ${rate > 50 ? 'success' : (rate > 0 ? 'info' : 'muted')}">${rate}%</span></td>
             `;
-            bsBody.appendChild(tr);
+            pmBody.appendChild(tr);
           });
+
+          // Order statuses
+          statusBody.replaceChildren();
+          const statusLabels = {
+            pending: 'Chờ xử lý',
+            confirmed: 'Đã xác nhận',
+            processing: 'Đang chuẩn bị',
+            shipped: 'Đang giao hàng',
+            delivered: 'Đã giao hàng',
+            cancelled: 'Đã hủy',
+            failed: 'Thất bại'
+          };
+          (data.orderStatuses || []).forEach(st => {
+            const tr = document.createElement('tr');
+            const isCancel = st.status === 'cancelled' || st.status === 'failed';
+            tr.innerHTML = `
+              <td><span class="badge ${isCancel ? 'error' : 'info'}">${statusLabels[st.status] || st.status}</span></td>
+              <td style="text-align: center;"><strong>${st.count}</strong> đơn</td>
+              <td style="text-align: right;">${Number(st.value || 0).toLocaleString('vi-VN')} ₫</td>
+            `;
+            statusBody.appendChild(tr);
+          });
+
+          // Best sellers
+          bsBody.replaceChildren();
+          if (!data.bestSellers || !data.bestSellers.length) {
+            bsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--admin-muted); padding: 24px 0;">Chưa có dữ liệu sản phẩm bán ra trong kỳ báo cáo này.</td></tr>';
+          } else {
+            data.bestSellers.forEach(bs => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td><strong>${bs.name}</strong></td>
+                <td>${bs.sku || '—'}</td>
+                <td style="text-align: center;"><strong>${bs.quantity}</strong> chiếc</td>
+                <td style="text-align: right;"><strong style="color: #16a34a;">${Number(bs.revenue || 0).toLocaleString('vi-VN')} ₫</strong></td>
+              `;
+              bsBody.appendChild(tr);
+            });
+          }
+        } catch (err) {
+          console.error(err);
+          pmBody.innerHTML = '<tr><td colspan="5" style="color:#dc2626; text-align:center;">Lỗi tải dữ liệu.</td></tr>';
         }
-      } catch (err) {
-        console.error(err);
       }
+
+      // Range Filter tabs
+      document.querySelectorAll('#rangeFilterTabs .order-filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#rangeFilterTabs .order-filter-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentRange = tab.dataset.range;
+          fetchReports(currentRange);
+        });
+      });
+
+      fetchReports(currentRange);
     })();
   </script>
 </body>

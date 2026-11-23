@@ -11,6 +11,7 @@
   <main class="admin-main">
     <header class="admin-top">
       <div>
+        <nav class="admin-breadcrumb"><a href="/admin">Admin</a> <span class="sep">/</span> <span class="current">Sản phẩm</span></nav>
         <p class="eyebrow">CATALOG & INVENTORY</p>
         <h1>Quản lý sản phẩm</h1>
         <p class="muted">Toàn bộ áo dài cách tân: Thêm mới, chỉnh sửa, cập nhật tồn kho tức thì và quản lý trạng thái.</p>
@@ -21,116 +22,208 @@
     <p id="productNotice" class="notice" role="status" hidden></p>
 
     <!-- Form Thêm / Chỉnh sửa sản phẩm -->
+    <!-- Form Thêm / Chỉnh sửa sản phẩm -->
     <section class="admin-panel" id="productFormPanel">
       <form id="productForm" class="admin-form">
         <input type="hidden" name="id">
-        <div class="form-title">
+        <div class="form-title" style="margin-bottom: 20px;">
           <div>
             <p class="eyebrow" id="formEyebrow">PRODUCT DETAILS</p>
-            <h2 id="productFormTitle">Thêm sản phẩm mới</h2>
+            <h2 id="productFormTitle" style="margin-bottom: 4px;">Thêm sản phẩm mới</h2>
+            <p class="muted" style="margin: 0; font-size: 13px;">Thiết lập thông tin áo dài cách tân, quản lý biến thể kích cỡ, màu sắc và chiến lược giá.</p>
           </div>
         </div>
-        <div class="form-grid">
-          <label>Tên sản phẩm *
-            <input name="name" required maxlength="200" placeholder="Ví dụ: Áo dài cách tân lụa thêu hoa">
-          </label>
-          <label>Mã SKU *
-            <input name="sku" required maxlength="80" placeholder="Ví dụ: TSF-AD-014">
-          </label>
-          <label>Mã sản phẩm (Nội bộ)
-            <input name="productCode" maxlength="80" placeholder="Ví dụ: AD-014">
-          </label>
-          <label>Slug URL (Để trống để tự tạo)
-            <input name="slug" placeholder="ao-dai-cach-tan-lua-theu-hoa">
-          </label>
-          <label>Giá bán (VND) *
-            <input name="price" type="number" min="0" step="1" required placeholder="Ví dụ: 450000">
-          </label>
-          <label>Giá gốc niêm yết (VND)
-            <input name="originalPrice" type="number" min="0" step="1" placeholder="Ví dụ: 550000">
-          </label>
-          <label>Giá khuyến mãi (VND)
-            <input name="salePrice" type="number" min="0" step="1" placeholder="Ví dụ: 420000">
-          </label>
-          <label>Tồn kho tổng (Tự tính khi có biến thể)
-            <input name="stock" type="number" min="0" step="1" value="0">
-          </label>
-          <label>Chất liệu vải
-            <input name="material" placeholder="Lụa Tơ Tằm, Gấm Thượng Hải, Nhung Then, Organza...">
-          </label>
-          <label>Kiểu dáng thiết kế
-            <input name="designStyle" placeholder="Dáng suông trẻ trung, Tà kép sang trọng, Tay bồng quý phái...">
-          </label>
-          <label>Thương hiệu
-            <input name="brand" value="Thanh Sơn" placeholder="Thanh Sơn Fashion">
-          </label>
-          <label>Từ khóa Tags
-            <input name="tags" placeholder="áo dài, cách tân, lễ tết, sự kiện, dạo phố">
-          </label>
-          <label class="wide">Ảnh chính sản phẩm (URL hoặc Đường dẫn)
-            <input name="image" type="text" placeholder="https://res.cloudinary.com/... hoặc /images/tsf-008.jpg">
-          </label>
-          <div class="wide" style="background: #fafaf9; border: 1px dashed #d6d3d1; border-radius: 8px; padding: 14px; margin-top: 4px;">
-            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-              <div id="imagePreviewContainer" style="width: 64px; height: 80px; border-radius: 6px; border: 1px solid #e7e5e4; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-                <img id="imagePreviewThumb" src="" alt="Xem trước ảnh" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-                <span id="imagePreviewPlaceholder" style="font-size: 24px; color: #a8a29e;">🖼️</span>
-              </div>
-              <div style="flex: 1; min-width: 220px;">
-                <label style="margin: 0; font-weight: 600; font-size: 13px; color: var(--admin-ink);">
-                  Tải ảnh từ máy tính (Tự động tải lên Cloudinary khi chọn tệp)
-                  <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp" style="margin-top: 6px;">
+
+        <div class="product-form-layout">
+          <!-- CỘT TRÁI (8 phần): THÔNG TIN CƠ BẢN, MÔ TẢ, ẢNH, BIẾN THỂ -->
+          <div class="product-form-main">
+            <!-- 1. Thông tin cơ bản -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Thông tin sản phẩm cốt lõi
+              </h3>
+              <div class="form-grid">
+                <label class="wide">Tên sản phẩm Áo dài *
+                  <input name="name" required maxlength="200" placeholder="Ví dụ: Áo dài cách tân lụa thêu hoa">
                 </label>
-                <div id="uploadStatusText" style="font-size: 12px; margin-top: 4px; color: var(--admin-muted);">
-                  Chưa chọn tệp ảnh mới từ máy.
+                <label>Mã SKU *
+                  <input name="sku" required maxlength="80" placeholder="Ví dụ: TSF-AD-014">
+                </label>
+                <label>Mã sản phẩm (Nội bộ)
+                  <input name="productCode" maxlength="80" placeholder="Ví dụ: AD-014">
+                </label>
+                <label>Chất liệu vải
+                  <input name="material" placeholder="Lụa Tơ Tằm, Gấm Thượng Hải, Nhung Then...">
+                </label>
+                <label>Kiểu dáng thiết kế
+                  <input name="designStyle" placeholder="Dáng suông trẻ trung, Tà kép sang trọng...">
+                </label>
+                <label>Thương hiệu
+                  <input name="brand" value="Thanh Sơn" placeholder="Thanh Sơn Fashion">
+                </label>
+                <label>Đường dẫn Slug (Tùy chọn)
+                  <input name="slug" placeholder="ao-dai-cach-tan-lua-theu-hoa">
+                </label>
+              </div>
+            </div>
+
+            <!-- 2. Mô tả sản phẩm -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Mô tả chi tiết
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <label>Mô tả ngắn (Hiển thị thẻ xem trước & SEO)
+                  <input name="shortDescription" placeholder="Mô tả tóm tắt phom dáng, vẻ đẹp tà áo dài...">
+                </label>
+                <label>Mô tả chi tiết sản phẩm
+                  <textarea name="description" rows="5" placeholder="Chi tiết đường kim mũi chỉ, hoa văn dệt thêu, cách giặt ủi và bảo quản..."></textarea>
+                </label>
+              </div>
+            </div>
+
+            <!-- 3. Hình ảnh sản phẩm -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                Hình ảnh sản phẩm
+              </h3>
+              
+              <!-- Unified Auto Upload Dropzone -->
+              <div class="upload-dropzone">
+                <div class="upload-preview-wrap">
+                  <div id="imagePreviewContainer" style="width: 72px; height: 96px; border-radius: 8px; border: 1px solid #e7e5e4; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                    <img id="imagePreviewThumb" src="" alt="Xem trước ảnh" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                    <span id="imagePreviewPlaceholder" style="font-size: 28px; color: #a8a29e;">🖼️</span>
+                  </div>
+                  <div style="flex: 1; min-width: 200px;">
+                    <label style="margin: 0; font-weight: 600; font-size: 13px; color: var(--admin-ink); cursor: pointer;">
+                      Chọn ảnh tải lên từ máy tính
+                      <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp" style="margin-top: 6px; font-size: 12px;">
+                    </label>
+                    <div id="uploadProgressBar" class="upload-progress-bar">
+                      <div id="uploadProgressBarFill" class="upload-progress-bar-fill"></div>
+                    </div>
+                    <div id="uploadStatusText" style="font-size: 12px; margin-top: 6px; color: var(--admin-muted);">
+                      Tự động tải lên Cloudinary ngay khi chọn tệp (JPEG, PNG, WebP &lt; 5MB).
+                    </div>
+                    <div style="margin-top: 8px;">
+                      <button id="removeImageBtn" type="button" class="table-action danger" style="display: none; font-size: 11px; padding: 3px 8px;">✕ Xóa ảnh này</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <button class="admin-button" id="uploadProductImage" type="button" style="align-self: center;">
-                Tải ảnh lên Cloudinary
-              </button>
-            </div>
-          </div>
-          <label class="wide">Mô tả ngắn
-            <input name="shortDescription" placeholder="Mô tả tóm tắt hiển thị trên card sản phẩm và SEO">
-          </label>
-          <label class="wide">Mô tả chi tiết
-            <textarea name="description" rows="4" placeholder="Mô tả chi tiết về phom dáng, chất vải, cách bảo quản và phối đồ..."></textarea>
-          </label>
-          <label>Tiêu đề SEO
-            <input name="seoTitle" maxlength="160" placeholder="Tiêu đề hiển thị trên Google">
-          </label>
-          <label>Mô tả SEO
-            <input name="seoDescription" maxlength="320" placeholder="Mô tả tóm tắt cho công cụ tìm kiếm">
-          </label>
 
-          <!-- Variant Editor -->
-          <section class="variant-editor wide" aria-labelledby="variantHeading">
-            <div class="variant-editor-heading">
-              <div>
-                <h3 id="variantHeading">Phân loại kích cỡ / màu sắc & Tồn kho biến thể</h3>
-                <p class="muted">Tạo các tổ hợp kích cỡ (S, M, L, XL) và màu sắc kèm số lượng tồn kho tương ứng.</p>
+              <div style="margin-top: 14px;">
+                <label style="font-size: 12px; color: var(--admin-muted);">Đường dẫn ảnh trực tiếp hoặc URL ngoài (Tùy chọn)
+                  <input name="image" type="text" placeholder="/images/tsf-008.jpg hoặc https://res.cloudinary.com/..." style="margin-top: 4px; font-size: 13px;">
+                </label>
               </div>
-              <button class="admin-button" id="addVariant" type="button">+ Thêm biến thể</button>
             </div>
-            <div id="variantRows" class="variant-rows"></div>
-          </section>
 
-          <label>Trạng thái kinh doanh
-            <select name="productStatus">
-              <option value="PUBLISHED">Đang hiển thị và kinh doanh (PUBLISHED)</option>
-              <option value="DRAFT">Bản nháp - Chưa công khai (DRAFT)</option>
-              <option value="INACTIVE">Ngừng kinh doanh (INACTIVE)</option>
-            </select>
-          </label>
-          <div style="display: flex; gap: 20px; align-items: center;">
-            <label class="check-label"><input name="isFeatured" type="checkbox" value="true"> Sản phẩm nổi bật</label>
-            <label class="check-label"><input name="isNewArrival" type="checkbox" value="true"> Hàng mới về</label>
+            <!-- 4. Biến thể kích cỡ / màu sắc & Tồn kho -->
+            <section class="variant-editor" aria-labelledby="variantHeading">
+              <div class="variant-editor-heading">
+                <div>
+                  <h3 id="variantHeading">Phân loại kích cỡ / màu sắc & Tồn kho biến thể</h3>
+                  <p class="muted">Tạo các tổ hợp kích cỡ (S, M, L, XL) và màu sắc kèm số lượng tồn kho tương ứng.</p>
+                </div>
+                <button class="admin-button" id="addVariant" type="button">+ Thêm biến thể</button>
+              </div>
+              <div id="variantRows" class="variant-rows"></div>
+            </section>
+          </div>
+
+          <!-- CỘT PHẢI (4 phần): TRẠNG THÁI, GIÁ BÁN, TAGS, SEO -->
+          <div class="product-form-side">
+            <!-- 1. Trạng thái kinh doanh -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                Trạng thái kinh doanh
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <label>Trạng thái hiển thị
+                  <select name="productStatus">
+                    <option value="PUBLISHED">Đang hiển thị & kinh doanh</option>
+                    <option value="DRAFT">Bản nháp - Chưa công khai</option>
+                    <option value="INACTIVE">Ngừng kinh doanh</option>
+                  </select>
+                </label>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--admin-line);">
+                  <label class="check-label"><input name="isFeatured" type="checkbox" value="true"> ⭐ Sản phẩm nổi bật</label>
+                  <label class="check-label"><input name="isNewArrival" type="checkbox" value="true"> 🏷️ Hàng mới về</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Giá bán & Doanh thu -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Chiến lược giá (VND)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <label>Giá bán thực tế (VND) *
+                  <input name="price" type="number" min="0" step="1" required placeholder="Ví dụ: 450000">
+                </label>
+                <label>Giá gốc niêm yết (VND)
+                  <input name="originalPrice" type="number" min="0" step="1" placeholder="Ví dụ: 550000">
+                  <small style="color: var(--admin-muted); font-size: 11px;">Phải ≥ Giá bán thực tế (hiển thị gạch ngang).</small>
+                </label>
+                <label>Giá khuyến mãi (VND)
+                  <input name="salePrice" type="number" min="0" step="1" placeholder="Ví dụ: 420000">
+                  <small style="color: var(--admin-muted); font-size: 11px;">Phải &lt; Giá bán thực tế (nếu áp dụng flash sale).</small>
+                </label>
+                <label style="padding-top: 8px; border-top: 1px solid var(--admin-line);">Tồn kho tổng
+                  <input name="stock" type="number" min="0" step="1" value="0">
+                  <small style="color: var(--admin-muted); font-size: 11px;">Tự động tính tổng từ các biến thể bên trái.</small>
+                </label>
+              </div>
+            </div>
+
+            <!-- 3. Phân loại & Tags -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" x2="7.01" y1="7" y2="7"/></svg>
+                Phân loại & Tags
+              </h3>
+              <label>Từ khóa Tags (Cách nhau bằng dấu phẩy)
+                <input name="tags" placeholder="áo dài, cách tân, lễ tết, sự kiện, dạo phố">
+              </label>
+            </div>
+
+            <!-- 4. Tối ưu SEO -->
+            <div class="product-card-section">
+              <h3>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+                Tối ưu hóa SEO
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <label>Tiêu đề SEO
+                  <input name="seoTitle" maxlength="160" placeholder="Tiêu đề hiển thị trên Google">
+                </label>
+                <label>Mô tả SEO
+                  <textarea name="seoDescription" rows="3" maxlength="320" placeholder="Mô tả tóm tắt cho công cụ tìm kiếm"></textarea>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="admin-actions">
-          <button class="admin-button primary" id="submitProductBtn" type="submit">Lưu sản phẩm</button>
-          <button class="admin-button" id="cancelProduct" type="button">Hủy / Làm mới form</button>
+        <!-- STICKY ACTION BAR -->
+        <div class="product-sticky-bar">
+          <div class="mode-indicator">
+            <span class="badge info" id="formModeBadge">Thêm mới</span>
+            <span id="formEditingTarget" style="color:var(--admin-ink);">Đang tạo sản phẩm mới</span>
+          </div>
+          <div class="btn-group">
+            <button class="admin-button" id="cancelProduct" type="button">Hủy / Đặt lại</button>
+            <button class="admin-button" id="saveDraftBtn" type="button">Lưu bản nháp</button>
+            <button class="admin-button primary" id="submitProductBtn" type="submit">Lưu & Xuất bản</button>
+          </div>
         </div>
       </form>
     </section>
@@ -339,11 +432,22 @@
         form.elements.stock.readOnly = false;
         formTitle.textContent = 'Thêm sản phẩm mới';
         formEyebrow.textContent = 'PRODUCT DETAILS';
-        submitBtn.textContent = 'Lưu sản phẩm';
+        submitBtn.textContent = 'Lưu & Xuất bản';
+        const modeBadge = document.getElementById('formModeBadge');
+        const editingTarget = document.getElementById('formEditingTarget');
+        if (modeBadge) {
+          modeBadge.textContent = 'Thêm mới';
+          modeBadge.className = 'badge info';
+        }
+        if (editingTarget) editingTarget.textContent = 'Đang tạo sản phẩm mới';
         setVariants([]);
         updateImagePreview('');
         if (fileInput) fileInput.value = '';
-        if (uploadStatusText) uploadStatusText.innerHTML = 'Chưa chọn tệp ảnh mới từ máy.';
+        if (uploadStatusText) uploadStatusText.innerHTML = 'Tự động tải lên Cloudinary ngay khi chọn tệp (JPEG, PNG, WebP < 5MB).';
+        const removeBtn = document.getElementById('removeImageBtn');
+        if (removeBtn) removeBtn.style.display = 'none';
+        const progressBar = document.getElementById('uploadProgressBar');
+        if (progressBar) progressBar.style.display = 'none';
       }
 
       function render() {
@@ -550,9 +654,18 @@
 
             formTitle.textContent = `Chỉnh sửa: ${p.name}`;
             formEyebrow.textContent = 'EDIT PRODUCT';
-            submitBtn.textContent = 'Cập nhật sản phẩm';
+            submitBtn.textContent = 'Cập nhật & Xuất bản';
+            const modeBadge = document.getElementById('formModeBadge');
+            const editingTarget = document.getElementById('formEditingTarget');
+            if (modeBadge) {
+              modeBadge.textContent = 'Chỉnh sửa';
+              modeBadge.className = 'badge warning';
+            }
+            if (editingTarget) editingTarget.textContent = `Đang sửa: ${p.sku || p.name}`;
             updateImagePreview(p.image);
             if (uploadStatusText) uploadStatusText.innerHTML = p.image ? 'Đang sử dụng ảnh hiện tại của sản phẩm.' : 'Chưa có ảnh.';
+            const removeBtn = document.getElementById('removeImageBtn');
+            if (removeBtn) removeBtn.style.display = p.image ? 'inline-block' : 'none';
             document.getElementById('productFormPanel').scrollIntoView({ behavior: 'smooth' });
           });
 
@@ -618,8 +731,11 @@
       const previewThumb = document.getElementById('imagePreviewThumb');
       const previewPlaceholder = document.getElementById('imagePreviewPlaceholder');
       const uploadStatusText = document.getElementById('uploadStatusText');
-      const uploadBtn = document.getElementById('uploadProductImage');
       const fileInput = document.getElementById('productImageFile');
+      const removeImageBtn = document.getElementById('removeImageBtn');
+      const uploadProgressBar = document.getElementById('uploadProgressBar');
+      const uploadProgressBarFill = document.getElementById('uploadProgressBarFill');
+      const saveDraftBtn = document.getElementById('saveDraftBtn');
 
       function updateImagePreview(url) {
         if (previewThumb && previewPlaceholder) {
@@ -627,12 +743,24 @@
             previewThumb.src = url.trim();
             previewThumb.style.display = 'block';
             previewPlaceholder.style.display = 'none';
+            if (removeImageBtn) removeImageBtn.style.display = 'inline-block';
           } else {
             previewThumb.src = '';
             previewThumb.style.display = 'none';
             previewPlaceholder.style.display = 'block';
+            if (removeImageBtn) removeImageBtn.style.display = 'none';
           }
         }
+      }
+
+      if (removeImageBtn) {
+        removeImageBtn.addEventListener('click', () => {
+          if (form.elements.image) form.elements.image.value = '';
+          if (fileInput) fileInput.value = '';
+          updateImagePreview('');
+          if (uploadStatusText) uploadStatusText.innerHTML = 'Đã xóa ảnh. Bạn có thể chọn ảnh mới từ máy hoặc dán link.';
+          if (uploadProgressBar) uploadProgressBar.style.display = 'none';
+        });
       }
 
       if (form.elements.image) {
@@ -648,9 +776,9 @@
           return null;
         }
 
-        if (uploadBtn) {
-          uploadBtn.disabled = true;
-          uploadBtn.textContent = 'Đang tải lên...';
+        if (uploadProgressBar) {
+          uploadProgressBar.style.display = 'block';
+          if (uploadProgressBarFill) uploadProgressBarFill.style.width = '35%';
         }
         if (uploadStatusText) {
           uploadStatusText.innerHTML = '<span style="color: #2563eb; font-weight: 600;">⏳ Đang tải ảnh lên Cloudinary...</span>';
@@ -667,15 +795,13 @@
         });
 
         if (!dataUrl) {
-          if (uploadBtn) {
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'Tải ảnh lên Cloudinary';
-          }
+          if (uploadProgressBar) uploadProgressBar.style.display = 'none';
           return null;
         }
 
         // Show immediate local preview
         updateImagePreview(dataUrl);
+        if (uploadProgressBarFill) uploadProgressBarFill.style.width = '70%';
 
         try {
           const res = await fetch('/api/admin/images', {
@@ -686,24 +812,24 @@
           const result = await res.json();
           if (!res.ok || !result.ok) throw new Error(result.message || 'Không thể tải ảnh lên Cloudinary.');
           
+          if (uploadProgressBarFill) uploadProgressBarFill.style.width = '100%';
           form.elements.image.value = result.image;
           updateImagePreview(result.image);
           if (uploadStatusText) {
             uploadStatusText.innerHTML = '<span style="color: #16a34a; font-weight: 600;">✓ Đã tải lên Cloudinary thành công!</span>';
           }
-          showNotice('Đã tải ảnh lên Cloudinary thành công. URL đã tự động điền vào form.');
+          showNotice('Đã tải ảnh lên Cloudinary thành công.');
+          setTimeout(() => {
+            if (uploadProgressBar) uploadProgressBar.style.display = 'none';
+          }, 1000);
           return result.image;
         } catch (err) {
+          if (uploadProgressBar) uploadProgressBar.style.display = 'none';
           if (uploadStatusText) {
             uploadStatusText.innerHTML = `<span style="color: #dc2626; font-weight: 600;">✗ Lỗi: ${err.message}</span>`;
           }
           showNotice(err.message, true);
           return null;
-        } finally {
-          if (uploadBtn) {
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'Tải ảnh lên Cloudinary';
-          }
         }
       }
 
@@ -717,18 +843,39 @@
         });
       }
 
-      // Manual click button
-      if (uploadBtn) {
-        uploadBtn.addEventListener('click', async () => {
-          const file = fileInput && fileInput.files && fileInput.files[0];
-          if (!file) return showNotice('Vui lòng chọn một ảnh JPEG, PNG hoặc WebP trước.', true);
-          await uploadSelectedImage(file);
+      // Save Draft button
+      if (saveDraftBtn) {
+        saveDraftBtn.addEventListener('click', () => {
+          form.elements.productStatus.value = 'DRAFT';
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.dispatchEvent(new Event('submit', { cancelable: true }));
+          }
         });
       }
 
       // Form submission (Add / Update)
       form.addEventListener('submit', async e => {
         e.preventDefault();
+
+        // 1. Price Validation Logic
+        const price = Number(form.elements.price.value || 0);
+        const origVal = form.elements.originalPrice.value;
+        const origPrice = origVal !== '' ? Number(origVal) : null;
+        const saleVal = form.elements.salePrice.value;
+        const salePrice = saleVal !== '' ? Number(saleVal) : null;
+
+        if (origPrice !== null && origPrice > 0 && origPrice < price) {
+          showNotice('Giá gốc niêm yết phải lớn hơn hoặc bằng giá bán thực tế.', true);
+          form.elements.originalPrice.focus();
+          return;
+        }
+        if (salePrice !== null && salePrice > 0 && salePrice >= price) {
+          showNotice('Giá khuyến mãi phải nhỏ hơn giá bán thực tế.', true);
+          form.elements.salePrice.focus();
+          return;
+        }
 
         // If file chosen from computer but not yet uploaded, upload now
         if (fileInput && fileInput.files && fileInput.files[0] && !form.elements.image.value.trim()) {
@@ -737,7 +884,7 @@
           const uploadedUrl = await uploadSelectedImage(fileInput.files[0]);
           if (!uploadedUrl) {
             submitBtn.disabled = false;
-            submitBtn.textContent = form.elements.id.value ? 'Cập nhật sản phẩm' : 'Lưu sản phẩm';
+            submitBtn.textContent = form.elements.id.value ? 'Cập nhật & Xuất bản' : 'Lưu & Xuất bản';
             return;
           }
         }
@@ -769,7 +916,7 @@
           showNotice(err.message, true);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = form.elements.id.value ? 'Cập nhật sản phẩm' : 'Lưu sản phẩm';
+          submitBtn.textContent = form.elements.id.value ? 'Cập nhật & Xuất bản' : 'Lưu & Xuất bản';
         }
       });
 

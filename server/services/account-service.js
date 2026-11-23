@@ -1,6 +1,7 @@
 const { readJson, writeJson } = require('../lib/json-store');
 const { usersFile } = require('../config');
-const { isMongoConnected } = require('../lib/mongo');
+const config = require('../config');
+const { connectMongo, isMongoConnected } = require('../lib/mongo');
 const Customer = require('../models/customer');
 const AdminUser = require('../models/admin-user');
 const Order = require('../models/order');
@@ -220,7 +221,13 @@ async function updateProfile(id, { fullName, phone, address, email }) {
   return users[index];
 }
 
-async function listCustomers({ query = '', page = 1, perPage = 20, status = '' } = {}) {
+async function listCustomers({ query = '', page = 1, perPage = 50, status = '', type = 'all' } = {}) {
+  if (!isMongoConnected() && config.mongoDbUri) {
+    try {
+      await connectMongo(config.mongoDbUri);
+    } catch (_) {}
+  }
+
   if (!isMongoConnected()) {
     let items = readJson(usersFile, []).map(u => ({
       id: u.id,
@@ -231,48 +238,100 @@ async function listCustomers({ query = '', page = 1, perPage = 20, status = '' }
       email: u.email || '',
       address: u.address || '',
       accountStatus: 'ACTIVE',
+      customerType: 'REGISTERED',
+      isGuest: false,
+      orderCount: 0,
+      totalSpent: 0,
       createdAt: u.createdAt || new Date()
     }));
     if (query) {
       const q = query.toLowerCase();
-      items = items.filter(u => u.fullName.toLowerCase().includes(q) || u.phone.includes(q) || u.username.toLowerCase().includes(q));
+      items = items.filter(u => (u.fullName && u.fullName.toLowerCase().includes(q)) || (u.phone && u.phone.includes(q)) || (u.username && u.username.toLowerCase().includes(q)));
     }
     return { items, pagination: { total: items.length, page: 1, totalPages: 1, perPage } };
   }
 
-  const filter = {};
-  if (status) filter.accountStatus = status;
+  const registeredFilter = {};
+  if (status) registeredFilter.accountStatus = status;
   if (query) {
     const regex = new RegExp(String(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    filter.$or = [{ fullName: regex }, { phone: regex }, { username: regex }, { email: regex }];
+    registeredFilter.$or = [{ fullName: regex }, { phone: regex }, { username: regex }, { email: regex }];
   }
 
+  let registeredList = [];
+  if (type === 'all' || type === 'registered') {
+    const rawCustomers = await Customer.find(registeredFilter).select('-passwordHash').sort({ createdAt: -1 }).lean();
+    const customerIds = rawCustomers.map(c => String(c._id));
+    const orderStats = await Order.aggregate([
+      { $match: { customerId: { $in: customerIds } } },
+      { $group: { _id: '$customerId', orderCount: { $sum: 1 }, totalSpent: { $sum: '$totalAmount' } } }
+    ]);
+    const statsMap = new Map(orderStats.map(s => [String(s._id), s]));
+
+    registeredList = rawCustomers.map(c => ({
+      ...c,
+      id: String(c._id),
+      customerType: 'REGISTERED',
+      isGuest: false,
+      orderCount: statsMap.get(String(c._id))?.orderCount || 0,
+      totalSpent: statsMap.get(String(c._id))?.totalSpent || 0
+    }));
+  }
+
+  let guestList = [];
+  if (type === 'all' || type === 'guest') {
+    // Group all guest orders
+    const guestOrders = await Order.find({ customerId: { $in: [null, ''] } }).sort({ createdAt: -1 }).lean();
+    const guestMap = new Map();
+    for (const ord of guestOrders) {
+      const phone = String(ord.customer?.phone || '').trim();
+      const name = String(ord.customer?.customerName || 'Khách vãng lai').trim();
+      const addr = String(ord.customer?.address || '').trim();
+      const key = phone || `order:${ord.id}`;
+
+      if (!guestMap.has(key)) {
+        guestMap.set(key, {
+          id: `guest-${ord.id}`,
+          _id: `guest-${ord.id}`,
+          username: phone ? `khach_${phone.slice(-4)}` : 'khach_vang_lai',
+          fullName: name,
+          phone: phone,
+          email: '',
+          address: addr,
+          accountStatus: 'ACTIVE',
+          customerType: 'GUEST',
+          isGuest: true,
+          orderCount: 1,
+          totalSpent: Number(ord.totalAmount || 0),
+          createdAt: ord.createdAt || new Date()
+        });
+      } else {
+        const item = guestMap.get(key);
+        item.orderCount += 1;
+        item.totalSpent += Number(ord.totalAmount || 0);
+        if (!item.address && addr) item.address = addr;
+      }
+    }
+
+    guestList = Array.from(guestMap.values());
+    if (status && status !== 'ACTIVE') {
+      guestList = []; // Guest customers are considered ACTIVE
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      guestList = guestList.filter(g => (g.fullName && g.fullName.toLowerCase().includes(q)) || (g.phone && g.phone.includes(q)));
+    }
+  }
+
+  const combined = [...registeredList, ...guestList].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const currentPage = Math.max(1, Number(page) || 1);
-  const limit = Math.max(1, Math.min(100, Number(perPage) || 20));
+  const limit = Math.max(1, Math.min(100, Number(perPage) || 50));
+  const total = combined.length;
   const skip = (currentPage - 1) * limit;
-
-  const [items, total] = await Promise.all([
-    Customer.find(filter).select('-passwordHash').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    Customer.countDocuments(filter)
-  ]);
-
-  // Attach order summary for each customer
-  const customerIds = items.map(c => String(c._id));
-  const orderStats = await Order.aggregate([
-    { $match: { customerId: { $in: customerIds } } },
-    { $group: { _id: '$customerId', orderCount: { $sum: 1 }, totalSpent: { $sum: '$totalAmount' } } }
-  ]);
-  const statsMap = new Map(orderStats.map(s => [String(s._id), s]));
-
-  const enrichedItems = items.map(c => ({
-    ...c,
-    id: String(c._id),
-    orderCount: statsMap.get(String(c._id))?.orderCount || 0,
-    totalSpent: statsMap.get(String(c._id))?.totalSpent || 0
-  }));
+  const paginatedItems = combined.slice(skip, skip + limit);
 
   return {
-    items: enrichedItems,
+    items: paginatedItems,
     pagination: {
       total,
       page: currentPage,

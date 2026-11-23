@@ -11,24 +11,33 @@
   <main class="admin-main">
     <header class="admin-top">
       <div>
+        <nav class="admin-breadcrumb"><a href="/admin">Admin</a> <span class="sep">/</span> <span class="current">Khách hàng</span></nav>
         <p class="eyebrow">CRM & KHÁCH HÀNG</p>
         <h1>Quản lý khách hàng</h1>
-        <p class="muted">Xem hồ sơ, số điện thoại, địa chỉ nhận hàng, lịch sử chi tiêu và quản lý tài khoản.</p>
+        <p class="muted">Xem hồ sơ thành viên và khách vãng lai, số điện thoại, địa chỉ nhận hàng, lịch sử đơn và chi tiêu.</p>
       </div>
     </header>
 
     <p id="customerNotice" class="notice" role="status" hidden></p>
 
     <section class="admin-panel">
-      <div class="table-heading">
-        <h2>Danh sách khách hàng</h2>
-        <div class="product-list-filters">
+      <div class="table-heading" style="flex-wrap: wrap; gap: 14px;">
+        <div>
+          <h2>Danh sách khách hàng (<span id="totalCustomersCount">0</span>)</h2>
+          <p class="muted" style="margin: 2px 0 0; font-size: 13px;">Dữ liệu tự động đồng bộ từ tài khoản thành viên và đơn hàng khách vãng lai.</p>
+        </div>
+        <div class="product-list-filters" style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <select id="typeFilter" aria-label="Lọc theo phân loại khách">
+            <option value="all">Tất cả khách hàng</option>
+            <option value="registered">Thành viên (Đã đăng ký)</option>
+            <option value="guest">Khách vãng lai</option>
+          </select>
           <select id="statusFilter" aria-label="Lọc theo trạng thái">
             <option value="">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang hoạt động</option>
             <option value="LOCKED">Đã khóa</option>
           </select>
-          <input id="customerSearch" type="search" placeholder="Tìm tên, SĐT, email...">
+          <input id="customerSearch" type="search" placeholder="Tìm tên, SĐT, email..." style="min-width: 240px;" aria-label="Tìm kiếm khách hàng">
         </div>
       </div>
       <div class="table-wrap">
@@ -36,17 +45,21 @@
           <thead>
             <tr>
               <th>Khách hàng</th>
+              <th>Phân loại</th>
               <th>Số điện thoại</th>
               <th>Email</th>
-              <th>Địa chỉ giao hàng</th>
-              <th>Đơn hàng</th>
-              <th>Tổng chi tiêu</th>
+              <th>Địa chỉ nhận hàng</th>
+              <th style="text-align: center;">Đơn hàng</th>
+              <th style="text-align: right;">Tổng chi tiêu</th>
               <th>Trạng thái</th>
-              <th>Thao tác</th>
+              <th style="text-align: right;">Thao tác</th>
             </tr>
           </thead>
           <tbody id="customerRows">
-            <tr><td colspan="8">Đang tải danh sách khách hàng...</td></tr>
+            <!-- Skeleton Rows initially -->
+            <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 80%;"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 65%;"></div></td></tr>
+            <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 90%;"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -60,6 +73,8 @@
       const notice = document.getElementById('customerNotice');
       const searchInput = document.getElementById('customerSearch');
       const statusFilter = document.getElementById('statusFilter');
+      const typeFilter = document.getElementById('typeFilter');
+      const totalCountSpan = document.getElementById('totalCustomersCount');
       let customers = [];
 
       function showNotice(text, isError = false) {
@@ -69,77 +84,119 @@
         setTimeout(() => { notice.hidden = true; }, 4000);
       }
 
+      function showSkeletons() {
+        rows.innerHTML = `
+          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 85%;"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 70%;"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 95%;"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width: 60%;"></div></td></tr>
+        `;
+      }
+
       function render(items) {
         rows.replaceChildren();
+        totalCountSpan.textContent = String(items ? items.length : 0);
+
         if (!items || !items.length) {
-          rows.innerHTML = '<tr><td colspan="8">Không tìm thấy khách hàng nào.</td></tr>';
+          rows.innerHTML = `
+            <tr>
+              <td colspan="9">
+                <div class="admin-empty-state">
+                  <svg viewBox="0 0 24 24" width="36" height="36" stroke="#a8a29e" stroke-width="1.5" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <p>Không tìm thấy khách hàng nào phù hợp với bộ lọc hiện tại.</p>
+                </div>
+              </td>
+            </tr>
+          `;
           return;
         }
 
         items.forEach(c => {
           const tr = document.createElement('tr');
 
-          // Name & username
+          // 1. Name & username
           const nameTd = document.createElement('td');
-          nameTd.innerHTML = `<strong>${c.fullName || c.username}</strong><br><small class="muted">@${c.username}</small>`;
+          const isGuest = Boolean(c.isGuest);
+          nameTd.innerHTML = `<strong>${c.fullName || c.username}</strong><br><small class="muted">${isGuest ? 'Khách đặt đơn' : ('@' + c.username)}</small>`;
           tr.appendChild(nameTd);
 
-          // Phone
+          // 2. Type badge (Thành viên vs Khách vãng lai)
+          const typeTd = document.createElement('td');
+          if (isGuest) {
+            typeTd.innerHTML = `<span class="badge" style="background:#f4f4f5; color:#52525b; border:1px solid #e4e4e7;">Khách vãng lai</span>`;
+          } else {
+            typeTd.innerHTML = `<span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">★ Thành viên</span>`;
+          }
+          tr.appendChild(typeTd);
+
+          // 3. Phone
           const phoneTd = document.createElement('td');
-          phoneTd.textContent = c.phone || '—';
+          if (c.phone) {
+            phoneTd.innerHTML = `<a href="tel:${c.phone}" style="color:#ec496d; font-weight:600; text-decoration:none;">${c.phone}</a>`;
+          } else {
+            phoneTd.innerHTML = `<span class="empty-dash">—</span>`;
+          }
           tr.appendChild(phoneTd);
 
-          // Email
+          // 4. Email
           const emailTd = document.createElement('td');
-          emailTd.textContent = c.email || '—';
+          emailTd.innerHTML = c.email ? `<span style="font-size:12px;">${c.email}</span>` : `<span class="empty-dash">—</span>`;
           tr.appendChild(emailTd);
 
-          // Address
+          // 5. Address
           const addressTd = document.createElement('td');
-          addressTd.textContent = c.address || '—';
+          addressTd.innerHTML = c.address ? `<small style="line-height:1.3; color:#57534e;">${c.address}</small>` : `<span class="empty-dash">—</span>`;
           tr.appendChild(addressTd);
 
-          // Orders count
+          // 6. Orders count
           const ordersTd = document.createElement('td');
-          ordersTd.textContent = `${c.orderCount || 0} đơn`;
+          ordersTd.style.textAlign = 'center';
+          ordersTd.innerHTML = `<strong>${c.orderCount || 0}</strong> <small class="muted">đơn</small>`;
           tr.appendChild(ordersTd);
 
-          // Total spent
+          // 7. Total spent
           const spentTd = document.createElement('td');
-          spentTd.innerHTML = `<strong>${Number(c.totalSpent || 0).toLocaleString('vi-VN')} ₫</strong>`;
+          spentTd.style.textAlign = 'right';
+          spentTd.innerHTML = `<strong style="color:#16a34a; font-size:13px;">${Number(c.totalSpent || 0).toLocaleString('vi-VN')} ₫</strong>`;
           tr.appendChild(spentTd);
 
-          // Status badge
+          // 8. Status badge
           const statusTd = document.createElement('td');
           const isLocked = c.accountStatus === 'LOCKED';
           statusTd.innerHTML = `<span class="badge ${isLocked ? 'error' : 'success'}">${isLocked ? 'Đã khóa' : 'Hoạt động'}</span>`;
           tr.appendChild(statusTd);
 
-          // Actions
+          // 9. Actions
           const actionTd = document.createElement('td');
-          const toggleBtn = document.createElement('button');
-          toggleBtn.className = `table-action ${isLocked ? 'primary' : 'danger'}`;
-          toggleBtn.textContent = isLocked ? 'Mở khóa' : 'Khóa tài khoản';
-          toggleBtn.addEventListener('click', async () => {
-            const nextStatus = isLocked ? 'ACTIVE' : 'LOCKED';
-            const actionText = isLocked ? 'mở khóa' : 'khóa';
-            if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản của ${c.fullName || c.username}?`)) return;
+          actionTd.style.textAlign = 'right';
 
-            try {
-              const res = await fetch(`/api/admin/customers/${c.id || c._id}/status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: nextStatus })
-              });
-              const result = await res.json();
-              if (!res.ok) throw new Error(result.message || 'Không thể cập nhật trạng thái.');
-              showNotice(`Đã ${actionText} tài khoản thành công.`);
-              load();
-            } catch (err) {
-              showNotice(err.message, true);
-            }
-          });
-          actionTd.appendChild(toggleBtn);
+          if (!isGuest) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = `table-action ${isLocked ? 'primary' : 'danger'}`;
+            toggleBtn.textContent = isLocked ? 'Mở khóa' : 'Khóa';
+            toggleBtn.addEventListener('click', async () => {
+              const nextStatus = isLocked ? 'ACTIVE' : 'LOCKED';
+              const actionText = isLocked ? 'mở khóa' : 'khóa';
+              if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản của ${c.fullName || c.username}?`)) return;
+
+              try {
+                const res = await fetch(`/api/admin/customers/${c.id || c._id}/status`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: nextStatus })
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.message || 'Không thể cập nhật trạng thái.');
+                showNotice(`Đã ${actionText} tài khoản thành công.`);
+                load();
+              } catch (err) {
+                showNotice(err.message, true);
+              }
+            });
+            actionTd.appendChild(toggleBtn);
+          } else {
+            actionTd.innerHTML = `<span class="muted" style="font-size:12px;">Đơn vãng lai</span>`;
+          }
           tr.appendChild(actionTd);
 
           rows.appendChild(tr);
@@ -147,21 +204,35 @@
       }
 
       async function load() {
+        showSkeletons();
         const q = searchInput.value.trim();
         const status = statusFilter.value;
+        const type = typeFilter.value;
         const params = new URLSearchParams();
         if (q) params.set('q', q);
         if (status) params.set('status', status);
+        if (type && type !== 'all') params.set('type', type);
 
         try {
           const res = await fetch(`/api/admin/customers?${params.toString()}`);
           const result = await res.json();
-          if (!res.ok) throw new Error(result.message || 'Không thể tải danh sách khách hàng.');
+          if (!res.ok || !result.ok) throw new Error(result.message || 'Không thể tải danh sách khách hàng.');
           customers = result.items || [];
           render(customers);
         } catch (err) {
           showNotice(err.message, true);
-          rows.innerHTML = '<tr><td colspan="8">Lỗi tải danh sách khách hàng.</td></tr>';
+          rows.innerHTML = `
+            <tr>
+              <td colspan="9">
+                <div class="admin-empty-state error">
+                  <p>✗ ${err.message || 'Lỗi tải danh sách khách hàng từ máy chủ.'}</p>
+                  <button class="admin-button" id="retryCustomersBtn" type="button" style="margin-top:8px;">Thử lại</button>
+                </div>
+              </td>
+            </tr>
+          `;
+          const retryBtn = document.getElementById('retryCustomersBtn');
+          if (retryBtn) retryBtn.addEventListener('click', load);
         }
       }
 
@@ -171,6 +242,7 @@
         debounceTimer = setTimeout(load, 300);
       });
       statusFilter.addEventListener('change', load);
+      typeFilter.addEventListener('change', load);
 
       load();
     })();

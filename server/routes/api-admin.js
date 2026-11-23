@@ -318,6 +318,12 @@ function productBody(body) {
     seoDescription: String(body.seoDescription || '').trim()
   };
   if (fields.salePrice != null && (!Number.isFinite(fields.salePrice) || fields.salePrice < 0)) throw Object.assign(new Error('Giá khuyến mãi không hợp lệ.'), { status: 400 });
+  if (fields.originalPrice != null && fields.originalPrice > 0 && fields.originalPrice < fields.price) {
+    throw Object.assign(new Error('Giá gốc niêm yết phải lớn hơn hoặc bằng giá bán thực tế.'), { status: 400 });
+  }
+  if (fields.salePrice != null && fields.salePrice > 0 && fields.salePrice >= fields.price) {
+    throw Object.assign(new Error('Giá khuyến mãi phải nhỏ hơn giá bán thực tế.'), { status: 400 });
+  }
   fields.searchTokens = searchTokens([
     fields.name, fields.productCode, fields.sku, fields.description,
     fields.shortDescription, fields.brand, fields.material, fields.designStyle,
@@ -551,8 +557,9 @@ router.post('/orders/:id/cancel', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRout
 router.get('/customers', requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), asyncRoute(async (req, res) => {
   const query = String(req.query.q || '').trim();
   const status = String(req.query.status || '').trim();
+  const type = String(req.query.type || 'all').trim();
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
-  const result = await accountService.listCustomers({ query, status, page, perPage: 25 });
+  const result = await accountService.listCustomers({ query, status, type, page, perPage: 50 });
   res.json({ ok: true, ...result });
 }));
 
@@ -570,11 +577,26 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
   if (requireMongo(res)) return;
   await purchaseService.expirePendingMongoOrders();
 
+  const range = String(req.query.range || 'all').trim();
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const allOrders = await Order.find().lean();
+  let filterStartDate = null;
+  if (range === 'today') {
+    filterStartDate = startOfToday;
+  } else if (range === '7d') {
+    filterStartDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (range === '30d') {
+    filterStartDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  const query = {};
+  if (filterStartDate) {
+    query.createdAt = { $gte: filterStartDate };
+  }
+
+  const allOrders = await Order.find(query).lean();
 
   let totalPaidRevenue = 0;
   let revenueToday = 0;
@@ -582,8 +604,8 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
   let paidOrderCount = 0;
 
   const paymentMethodMap = {
-    bank_transfer: { method: 'bank_transfer', count: 0, revenue: 0 },
-    cod: { method: 'cod', count: 0, revenue: 0 }
+    bank_transfer: { method: 'bank_transfer', totalCount: 0, paidCount: 0, revenue: 0 },
+    cod: { method: 'cod', totalCount: 0, paidCount: 0, revenue: 0 }
   };
 
   const statusMap = {};
@@ -593,8 +615,10 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
     const createdAt = new Date(order.createdAt);
     const pm = order.paymentMethod || 'bank_transfer';
 
-    if (!paymentMethodMap[pm]) paymentMethodMap[pm] = { method: pm, count: 0, revenue: 0 };
-    paymentMethodMap[pm].count += 1;
+    if (!paymentMethodMap[pm]) {
+      paymentMethodMap[pm] = { method: pm, totalCount: 0, paidCount: 0, revenue: 0 };
+    }
+    paymentMethodMap[pm].totalCount += 1;
 
     if (!statusMap[order.status]) statusMap[order.status] = { status: order.status, count: 0, value: 0 };
     statusMap[order.status].count += 1;
@@ -603,6 +627,7 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
     if (order.paymentStatus === 'paid') {
       totalPaidRevenue += amount;
       paidOrderCount += 1;
+      paymentMethodMap[pm].paidCount += 1;
       paymentMethodMap[pm].revenue += amount;
 
       if (createdAt >= startOfToday) revenueToday += amount;
@@ -613,8 +638,11 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
   const aov = paidOrderCount > 0 ? Math.round(totalPaidRevenue / paidOrderCount) : 0;
 
   // Best sellers aggregation
+  const matchFilter = { status: { $nin: ['cancelled', 'failed'] } };
+  if (filterStartDate) matchFilter.createdAt = { $gte: filterStartDate };
+
   const bestSellersAgg = await Order.aggregate([
-    { $match: { status: { $nin: ['cancelled', 'failed'] } } },
+    { $match: matchFilter },
     { $unwind: '$items' },
     {
       $group: {
@@ -631,13 +659,17 @@ router.get('/reports', requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (re
 
   res.json({
     ok: true,
+    range,
     totalPaidRevenue,
     revenueToday,
     revenueThisMonth,
     paidOrderCount,
     totalOrders: allOrders.length,
     aov,
-    paymentMethods: Object.values(paymentMethodMap),
+    paymentMethods: Object.values(paymentMethodMap).map(pm => ({
+      ...pm,
+      count: pm.paidCount // backwards compatibility for existing consumers
+    })),
     orderStatuses: Object.values(statusMap),
     bestSellers: bestSellersAgg
   });

@@ -11,11 +11,11 @@
   <main class="admin-main">
     <header class="admin-top">
       <div>
+        <nav class="admin-breadcrumb"><a href="/admin">Admin</a> <span class="sep">/</span> <span class="current">Đơn hàng</span></nav>
         <p class="eyebrow">FULFILLMENT & ORDERS</p>
         <h1>Quản lý đơn hàng</h1>
         <p class="muted">Tối đa 100 đơn gần nhất · Cập nhật trạng thái may, đóng gói, vận chuyển và xác nhận thanh toán.</p>
       </div>
-      <a class="admin-button" href="/admin">◫ Tổng quan CMS</a>
     </header>
 
     <% if (locals.error) { %>
@@ -42,19 +42,22 @@
         </div>
 
         <% if (!items || !items.length) { %>
-          <p class="muted" style="padding: 24px 0; text-align: center;">Chưa có đơn hàng nào trong hệ thống.</p>
+          <div class="empty-state" style="padding: 48px 0; text-align: center;">
+            <svg class="lucide-icon" viewBox="0 0 24 24" width="40" height="40" stroke="#a8a29e" stroke-width="1.5" fill="none" style="margin-bottom: 12px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <p class="muted" style="margin: 0; font-size: 14px;">Chưa có đơn hàng nào trong hệ thống.</p>
+          </div>
         <% } else { %>
           <div class="table-wrap">
             <table class="orders-table">
               <thead>
                 <tr>
-                  <th>Mã đơn & Ngày tạo</th>
-                  <th>Thông tin khách hàng</th>
-                  <th>Sản phẩm đặt may/mua</th>
+                  <th>Mã đơn & Ngày</th>
+                  <th>Khách hàng</th>
+                  <th>Sản phẩm đặt</th>
                   <th>Thanh toán</th>
-                  <th>Trạng thái đơn</th>
-                  <th>Tổng giá trị</th>
-                  <th>Thao tác xử lý</th>
+                  <th>Trạng thái</th>
+                  <th style="text-align: right;">Tổng tiền</th>
+                  <th style="text-align: right;">Thao tác</th>
                 </tr>
               </thead>
               <tbody id="ordersTableBody">
@@ -63,16 +66,18 @@
                     const statusLabels = {
                       pending: 'Chờ xác nhận',
                       confirmed: 'Đã xác nhận',
-                      processing: 'Đang may / chuẩn bị',
-                      shipped: 'Đang giao hàng',
-                      delivered: 'Đã giao thành công',
-                      cancelled: 'Đã hủy đơn',
+                      processing: 'Đang chuẩn bị',
+                      shipped: 'Đang giao',
+                      delivered: 'Đã giao',
+                      cancelled: 'Đã hủy',
                       failed: 'Thất bại'
                     };
                     const statusClass = order.status || 'pending';
-                    const paymentMethodLabel = order.paymentMethod === 'cod' ? 'COD (Thu hộ)' : 'Chuyển khoản VietQR';
+                    const paymentMethodLabel = order.paymentMethod === 'cod' ? 'COD' : 'VietQR';
                     const paymentStatusClass = order.paymentStatus === 'paid' ? 'pay-paid' : (order.paymentStatus === 'failed' ? 'pay-failed' : 'pay-pending');
-                    const paymentStatusLabel = order.paymentStatus === 'paid' ? '✓ Đã thanh toán' : (order.paymentStatus === 'failed' ? '✗ Lỗi thanh toán' : '⏳ Chờ thanh toán');
+                    const paymentStatusLabel = order.paymentStatus === 'paid' ? '✓ Đã thu' : (order.paymentStatus === 'failed' ? '✗ Lỗi' : '⏳ Chờ');
+                    const shortId = order.id ? (order.id.startsWith('HD-') ? order.id : ('#' + order.id.slice(0, 8))) : '#---';
+                    const safeOrderJson = JSON.stringify(order).replace(/"/g, '&quot;');
                   %>
                   <tr data-order-row="<%= order.id %>" 
                       data-status="<%= order.status %>" 
@@ -80,76 +85,65 @@
                       data-payment-status="<%= order.paymentStatus || 'pending' %>"
                       data-search-text="<%= (order.id + ' ' + (order.customer?.customerName || '') + ' ' + (order.customer?.phone || '') + ' ' + (order.customer?.address || '')).toLowerCase() %>">
                     <td>
-                      <strong style="font-size: 13px; color: var(--admin-ink);"><%= order.id %></strong>
-                      <small style="color: var(--admin-muted);"><%= new Date(order.createdAt).toLocaleString('vi-VN') %></small>
+                      <div class="order-code-badge">
+                        <span><%= shortId %></span>
+                        <button class="order-copy-btn" type="button" title="Sao chép mã đơn" data-copy-order="<%= order.id %>">
+                          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        </button>
+                      </div>
+                      <small style="display: block; color: var(--admin-muted); margin-top: 3px; font-size: 11px;"><%= new Date(order.createdAt).toLocaleDateString('vi-VN') %></small>
                     </td>
                     <td>
-                      <strong style="color: var(--admin-ink);"><%= order.customer?.customerName || 'Khách vãng lai' %></strong>
+                      <strong style="color: var(--admin-ink); font-size: 13px;"><%= order.customer?.customerName || 'Khách vãng lai' %></strong>
                       <% if (order.customer?.phone) { %>
-                        <small><a href="tel:<%= order.customer.phone %>" style="color: #ec496d; font-weight: 600;">📞 <%= order.customer.phone %></a></small>
-                      <% } %>
-                      <% if (order.customer?.address) { %>
-                        <small style="color: var(--admin-muted); line-height: 1.3;"><%= order.customer.address %></small>
+                        <div style="font-size: 12px; margin-top: 2px;"><a href="tel:<%= order.customer.phone %>" style="color: #ec496d; font-weight: 600; text-decoration: none;"><%= order.customer.phone %></a></div>
                       <% } %>
                     </td>
                     <td>
-                      <ul class="admin-order-items" style="list-style: none; padding-left: 0;">
-                        <% (order.items || []).forEach(item => { %>
-                          <li style="margin-bottom: 6px;">
-                            <strong><%= item.name %></strong> × <%= item.qty %>
-                            <% if (item.size || item.color) { %>
-                              <br><small style="color: var(--admin-muted);">Phân loại: <%= [item.size ? ('Cỡ ' + item.size) : '', item.color].filter(Boolean).join(' · ') %></small>
-                            <% } %>
-                          </li>
-                        <% }) %>
-                      </ul>
+                      <div style="font-size: 13px; line-height: 1.3;">
+                        <% const firstItem = (order.items || [])[0]; %>
+                        <% if (firstItem) { %>
+                          <strong><%= firstItem.name %></strong> × <%= firstItem.qty %>
+                          <% if ((order.items || []).length > 1) { %>
+                            <span style="color: var(--admin-muted); font-size: 11px;">(+<%= (order.items || []).length - 1 %> món khác)</span>
+                          <% } %>
+                          <% if (firstItem.size || firstItem.color) { %>
+                            <br><small style="color: var(--admin-muted); font-size: 11px;"><%= [firstItem.size ? ('Cỡ ' + firstItem.size) : '', firstItem.color].filter(Boolean).join(' · ') %></small>
+                          <% } %>
+                        <% } else { %>
+                          <span style="color: var(--admin-muted);">0 sản phẩm</span>
+                        <% } %>
+                      </div>
                     </td>
                     <td>
-                      <div><strong><%= paymentMethodLabel %></strong></div>
-                      <span class="pay-badge <%= paymentStatusClass %>"><%= paymentStatusLabel %></span>
+                      <div style="font-size: 12px; font-weight: 600;"><%= paymentMethodLabel %></div>
+                      <span class="pay-badge <%= paymentStatusClass %>" style="margin-top: 3px;"><%= paymentStatusLabel %></span>
                     </td>
                     <td>
                       <span class="order-badge status-<%= statusClass %>"><%= statusLabels[order.status] || order.status %></span>
                     </td>
-                    <td>
-                      <strong style="font-size: 14px; color: #1c1c1a;"><%= Number(order.totalAmount || 0).toLocaleString('vi-VN') %> ₫</strong>
+                    <td style="text-align: right;">
+                      <strong style="font-size: 13px; color: #1c1c1a;"><%= Number(order.totalAmount || 0).toLocaleString('vi-VN') %> ₫</strong>
                     </td>
-                    <td class="order-actions">
-                      <% if (order.paymentMethod !== 'cod' && (order.paymentStatus || 'pending') === 'pending') { %>
-                        <button class="table-action" type="button" data-action="payment" data-value="paid" style="background: #ecfdf5; color: #15803d; font-weight: 600;">✓ Xác nhận đã nhận tiền</button>
-                        <button class="table-action danger" type="button" data-action="payment" data-value="failed">Báo thanh toán lỗi</button>
-                      <% } %>
-                      <% if (order.paymentMethod === 'cod' && order.status === 'delivered' && order.paymentStatus !== 'paid') { %>
-                        <button class="table-action" type="button" data-action="payment" data-value="paid" style="background: #ecfdf5; color: #15803d; font-weight: 600;">✓ Đã thu tiền COD</button>
-                      <% } %>
-                      <% if (order.status === 'pending' && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid')) { %>
-                        <button class="table-action" type="button" data-action="status" data-value="confirmed" style="background: #eff6ff; color: #1d4ed8; font-weight: 600;">Xác nhận đơn</button>
-                      <% } %>
-                      <% if (order.status === 'confirmed') { %>
-                        <button class="table-action" type="button" data-action="status" data-value="processing" style="background: #f5f3ff; color: #6d28d9; font-weight: 600;">Đang may/chuẩn bị</button>
-                      <% } %>
-                      <% if (order.status === 'processing') { %>
-                        <button class="table-action" type="button" data-action="status" data-value="shipped" style="background: #f0fdf4; color: #166534; font-weight: 600;">Bàn giao vận chuyển</button>
-                      <% } %>
-                      <% if (order.status === 'shipped') { %>
-                        <button class="table-action" type="button" data-action="status" data-value="delivered" style="background: #ecfdf5; color: #15803d; font-weight: 600;">Đã giao thành công</button>
-                      <% } %>
-                      <% if (['pending', 'confirmed', 'processing'].includes(order.status) && order.paymentStatus !== 'paid') { %>
-                        <button class="table-action danger" type="button" data-action="status" data-value="cancelled">Hủy đơn</button>
-                      <% } %>
-                      <details class="order-audit" style="margin-top: 8px;">
-                        <summary style="font-size: 11px;">Xem lịch sử luân chuyển</summary>
-                        <ul style="font-size: 11px; padding-left: 14px;">
-                          <% (order.statusHistory || []).forEach(event => { %>
-                            <li>Trạng thái: <%= statusLabels[event.status] || event.status %> · <%= new Date(event.changedAt).toLocaleString('vi-VN') %> (<%= event.actor %>)</li>
-                          <% }) %>
-                          <% (order.paymentHistory || []).forEach(event => { %>
-                            <li>Thanh toán: <%= event.status %> · <%= new Date(event.changedAt).toLocaleString('vi-VN') %> (<%= event.actor %>)</li>
-                          <% }) %>
-                          <li>Tồn kho đã trừ: <%= order.inventoryDeductedAt ? new Date(order.inventoryDeductedAt).toLocaleString('vi-VN') : 'Không' %></li>
-                          <li>Tồn kho đã hoàn: <%= order.inventoryRestoredAt ? new Date(order.inventoryRestoredAt).toLocaleString('vi-VN') : 'Chưa' %></li>
-                        </ul>
-                      </details>
+                    <td style="text-align: right;">
+                      <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                        <% if (order.paymentMethod !== 'cod' && (order.paymentStatus || 'pending') === 'pending') { %>
+                          <button class="table-action" type="button" data-action="payment" data-value="paid" style="background: #ecfdf5; color: #15803d; font-weight: 600; font-size: 11px;" title="Xác nhận đã nhận tiền">✓ Đã thu</button>
+                        <% } else if (order.status === 'pending') { %>
+                          <button class="table-action" type="button" data-action="status" data-value="confirmed" style="background: #eff6ff; color: #1d4ed8; font-weight: 600; font-size: 11px;">Xác nhận</button>
+                        <% } else if (order.status === 'confirmed') { %>
+                          <button class="table-action" type="button" data-action="status" data-value="processing" style="background: #f5f3ff; color: #6d28d9; font-weight: 600; font-size: 11px;">Chuẩn bị</button>
+                        <% } else if (order.status === 'processing') { %>
+                          <button class="table-action" type="button" data-action="status" data-value="shipped" style="background: #f0fdf4; color: #166534; font-weight: 600; font-size: 11px;">Giao hàng</button>
+                        <% } else if (order.status === 'shipped') { %>
+                          <button class="table-action" type="button" data-action="status" data-value="delivered" style="background: #ecfdf5; color: #15803d; font-weight: 600; font-size: 11px;">Đã giao</button>
+                        <% } %>
+                        <button class="table-action" type="button" data-open-drawer="<%= order.id %>" style="border: 1px solid var(--admin-line); background: #fff;" title="Xem chi tiết & thao tác đầy đủ">
+                          Chi tiết
+                        </button>
+                      </div>
+                      <!-- Hidden payload for Drawer -->
+                      <script type="application/json" id="order-data-<%= order.id %>"><%- JSON.stringify(order) %></script>
                     </td>
                   </tr>
                 <% }) %>
@@ -161,30 +155,70 @@
     <% } %>
   </main>
 
+  <!-- ORDER DETAIL DRAWER & BACKDROP -->
+  <div class="order-drawer-backdrop" id="orderDrawerBackdrop"></div>
+  <aside class="order-drawer" id="orderDrawer" aria-hidden="true">
+    <div class="order-drawer-header">
+      <h3>
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        Chi tiết đơn <span id="drawerOrderId"></span>
+      </h3>
+      <button class="order-drawer-close" id="closeOrderDrawer" type="button" aria-label="Đóng chi tiết">✕</button>
+    </div>
+    <div class="order-drawer-body" id="drawerBody">
+      <!-- Dynamic Drawer Content -->
+    </div>
+    <div class="order-drawer-footer" id="drawerFooter">
+      <!-- Dynamic Action Buttons -->
+    </div>
+  </aside>
+
   <script>
     (() => {
       // Dynamic Order Status and Payment Actions
-      document.querySelectorAll('[data-order-row] [data-action]').forEach(button => {
-        button.addEventListener('click', async () => {
-          const row = button.closest('[data-order-row]');
-          const notice = document.getElementById('orderNotice');
-          const endpoint = button.dataset.action === 'payment' ? 'payment' : 'status';
-          button.disabled = true;
-          try {
-            const response = await fetch(`/api/admin/orders/${encodeURIComponent(row.dataset.orderRow)}/${endpoint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: button.dataset.value })
-            });
-            const result = await response.json();
-            if (!response.ok || !result.ok) throw new Error(result.message || 'Không thể cập nhật đơn hàng.');
-            window.location.reload();
-          } catch (error) {
+      async function updateOrderStatus(orderId, actionType, value) {
+        const notice = document.getElementById('orderNotice');
+        try {
+          const response = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/${actionType}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: value })
+          });
+          const result = await response.json();
+          if (!response.ok || !result.ok) throw new Error(result.message || 'Không thể cập nhật đơn hàng.');
+          window.location.reload();
+        } catch (error) {
+          if (notice) {
             notice.hidden = false;
             notice.classList.add('error');
             notice.textContent = error.message || 'Không thể cập nhật đơn hàng.';
-            button.disabled = false;
+          } else {
+            alert(error.message);
           }
+        }
+      }
+
+      document.querySelectorAll('[data-order-row] [data-action]').forEach(button => {
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const row = button.closest('[data-order-row]');
+          const orderId = row.dataset.orderRow;
+          const endpoint = button.dataset.action === 'payment' ? 'payment' : 'status';
+          button.disabled = true;
+          updateOrderStatus(orderId, endpoint, button.dataset.value);
+        });
+      });
+
+      // Quick Copy Order Code
+      document.querySelectorAll('[data-copy-order]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const code = btn.dataset.copyOrder;
+          navigator.clipboard.writeText(code).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span style="color:#16a34a; font-size:10px;">✓</span>';
+            setTimeout(() => { btn.innerHTML = orig; }, 1200);
+          });
         });
       });
 
@@ -215,6 +249,152 @@
           activeFilter = tab.dataset.statusFilter;
           applyFilter();
         });
+      });
+
+      // ORDER DRAWER LOGIC
+      const drawer = document.getElementById('orderDrawer');
+      const backdrop = document.getElementById('orderDrawerBackdrop');
+      const closeBtn = document.getElementById('closeOrderDrawer');
+      const drawerOrderId = document.getElementById('drawerOrderId');
+      const drawerBody = document.getElementById('drawerBody');
+      const drawerFooter = document.getElementById('drawerFooter');
+
+      const statusLabels = {
+        pending: 'Chờ xác nhận',
+        confirmed: 'Đã xác nhận',
+        processing: 'Đang may / chuẩn bị',
+        shipped: 'Đang giao hàng',
+        delivered: 'Đã giao thành công',
+        cancelled: 'Đã hủy đơn',
+        failed: 'Thất bại'
+      };
+
+      function openDrawer(orderId) {
+        const scriptEl = document.getElementById(`order-data-${orderId}`);
+        if (!scriptEl) return;
+        let order = null;
+        try { order = JSON.parse(scriptEl.textContent); } catch (e) { return; }
+
+        drawerOrderId.textContent = order.id;
+        drawer.setAttribute('aria-hidden', 'false');
+        drawer.classList.add('active');
+        backdrop.classList.add('active');
+
+        // Render Drawer Body
+        const customer = order.customer || {};
+        const items = order.items || [];
+        const statusClass = order.status || 'pending';
+        const paymentMethod = order.paymentMethod === 'cod' ? 'COD (Thu hộ)' : 'Chuyển khoản VietQR';
+        const paymentStatus = order.paymentStatus === 'paid' ? 'Đã thanh toán' : (order.paymentStatus === 'failed' ? 'Lỗi thanh toán' : 'Chờ thanh toán');
+
+        drawerBody.innerHTML = `
+          <div class="drawer-section">
+            <h4>Thông tin giao nhận</h4>
+            <div class="drawer-info-grid">
+              <div><span>Người nhận</span><strong>${customer.customerName || 'Khách vãng lai'}</strong></div>
+              <div><span>Số điện thoại</span><strong><a href="tel:${customer.phone}" style="color:#ec496d; text-decoration:none;">${customer.phone || '—'}</a></strong></div>
+              <div style="grid-column: 1/-1;"><span>Địa chỉ</span><strong>${customer.address || '—'}</strong></div>
+              ${customer.notes ? `<div style="grid-column: 1/-1;"><span>Ghi chú</span><em style="color:#57534e;">${customer.notes}</em></div>` : ''}
+            </div>
+          </div>
+
+          <div class="drawer-section">
+            <h4>Sản phẩm trong đơn (${items.length})</h4>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              ${items.map(it => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fafaf9; border-radius:8px; border:1px solid var(--admin-line);">
+                  <div>
+                    <strong style="font-size:13px; color:var(--admin-ink);">${it.name}</strong> × ${it.qty}
+                    <div style="font-size:11px; color:var(--admin-muted);">${[it.size ? ('Cỡ ' + it.size) : '', it.color].filter(Boolean).join(' · ')}</div>
+                  </div>
+                  <strong style="font-size:13px; color:var(--admin-ink);">${Number(it.subtotal || it.price * it.qty || 0).toLocaleString('vi-VN')} ₫</strong>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="drawer-section">
+            <h4>Thanh toán & Trạng thái</h4>
+            <div class="drawer-info-grid">
+              <div><span>Phương thức</span><strong>${paymentMethod}</strong></div>
+              <div><span>Trạng thái TT</span><strong>${paymentStatus}</strong></div>
+              <div><span>Trạng thái đơn</span><strong>${statusLabels[order.status] || order.status}</strong></div>
+              <div><span>Tổng thanh toán</span><strong style="color:#16a34a; font-size:15px;">${Number(order.totalAmount || 0).toLocaleString('vi-VN')} ₫</strong></div>
+            </div>
+          </div>
+
+          <div class="drawer-section">
+            <h4>Lịch sử luân chuyển & Kho</h4>
+            <div style="background:#fafaf9; padding:12px; border-radius:8px; border:1px solid var(--admin-line); font-size:12px; display:flex; flex-direction:column; gap:6px;">
+              <div>• Tồn kho đã trừ: <strong>${order.inventoryDeductedAt ? new Date(order.inventoryDeductedAt).toLocaleString('vi-VN') : 'Không'}</strong></div>
+              <div>• Tồn kho đã hoàn: <strong>${order.inventoryRestoredAt ? new Date(order.inventoryRestoredAt).toLocaleString('vi-VN') : 'Chưa'}</strong></div>
+              ${(order.statusHistory || []).map(h => `
+                <div style="color:var(--admin-muted); font-size:11px;">• [${statusLabels[h.status] || h.status}] ${new Date(h.changedAt).toLocaleString('vi-VN')} (${h.actor})</div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        // Render Drawer Actions
+        let actionButtonsHtml = '';
+        if (order.paymentMethod !== 'cod' && (order.paymentStatus || 'pending') === 'pending') {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="payment" data-drawer-val="paid" style="background:#ecfdf5; color:#15803d; font-weight:700;">✓ Xác nhận đã nhận tiền</button>`;
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="payment" data-drawer-val="failed" style="background:#fef2f2; color:#b91c1c;">Báo thanh toán lỗi</button>`;
+        }
+        if (order.paymentMethod === 'cod' && order.status === 'delivered' && order.paymentStatus !== 'paid') {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="payment" data-drawer-val="paid" style="background:#ecfdf5; color:#15803d; font-weight:700;">✓ Đã thu tiền COD</button>`;
+        }
+        if (order.status === 'pending' && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid')) {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="status" data-drawer-val="confirmed" style="background:#eff6ff; color:#1d4ed8; font-weight:700;">Xác nhận đơn</button>`;
+        }
+        if (order.status === 'confirmed') {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="status" data-drawer-val="processing" style="background:#f5f3ff; color:#6d28d9; font-weight:700;">Chuẩn bị hàng</button>`;
+        }
+        if (order.status === 'processing') {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="status" data-drawer-val="shipped" style="background:#f0fdf4; color:#166534; font-weight:700;">Bàn giao vận chuyển</button>`;
+        }
+        if (order.status === 'shipped') {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="status" data-drawer-val="delivered" style="background:#ecfdf5; color:#15803d; font-weight:700;">Đã giao thành công</button>`;
+        }
+        if (['pending', 'confirmed', 'processing'].includes(order.status) && order.paymentStatus !== 'paid') {
+          actionButtonsHtml += `<button class="admin-button" data-drawer-action="status" data-drawer-val="cancelled" style="background:#fef2f2; color:#b91c1c; margin-left:auto;">Hủy đơn</button>`;
+        }
+
+        drawerFooter.innerHTML = actionButtonsHtml || '<span class="muted" style="font-size:12px;">Đơn hàng đã hoàn tất luân chuyển.</span>';
+
+        drawerFooter.querySelectorAll('[data-drawer-action]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            btn.disabled = true;
+            updateOrderStatus(order.id, btn.dataset.drawerAction, btn.dataset.drawerVal);
+          });
+        });
+      }
+
+      function closeDrawer() {
+        drawer.setAttribute('aria-hidden', 'true');
+        drawer.classList.remove('active');
+        backdrop.classList.remove('active');
+      }
+
+      document.querySelectorAll('[data-open-drawer]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDrawer(btn.dataset.openDrawer);
+        });
+      });
+
+      rows.forEach(r => {
+        r.style.cursor = 'pointer';
+        r.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          openDrawer(r.dataset.orderRow);
+        });
+      });
+
+      if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+      if (backdrop) backdrop.addEventListener('click', closeDrawer);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawer.classList.contains('active')) closeDrawer();
       });
     })();
   </script>

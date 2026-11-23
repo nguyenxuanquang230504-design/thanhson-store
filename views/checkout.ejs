@@ -28,7 +28,7 @@
         </div>
         <div class="form-group">
           <label>Địa chỉ giao hàng</label>
-          <textarea name="address" required placeholder="Nhập địa chỉ nhận hàng"></textarea>
+          <textarea name="address" required placeholder="Nhập địa chỉ nhận hàng"><%= user ? (user.address || '') : '' %></textarea>
         </div>
         <div class="form-group">
           <label>Ghi chú</label>

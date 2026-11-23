@@ -71,7 +71,7 @@ test('Customer model validates phone and hashes password', async () => {
   assert.equal(customer.accountStatus, 'ACTIVE');
 });
 
-test('Header template renders all 8 required navigation items and brand identity', async () => {
+test('Header template renders core navigation items and brand identity without redundant collection link', async () => {
   const html = await ejs.renderFile(path.join(__dirname, '..', 'views', 'partials', 'header.ejs'), {
     badges: { cart: 2, wishlist: 1 },
     currentUser: null
@@ -81,7 +81,7 @@ test('Header template renders all 8 required navigation items and brand identity
   assert.match(html, /Chuyên Áo Dài Cách Tân/);
   assert.match(html, /Trang chủ/);
   assert.match(html, /Tất cả áo dài/);
-  assert.match(html, /Bộ sưu tập/);
+  assert.doesNotMatch(html, /<a href="\/san-pham\?collection=true">/, 'Redundant collection link must be removed');
   assert.match(html, /Sản phẩm mới/);
   assert.match(html, /Khuyến mãi/);
   assert.match(html, /Yêu thích/);

@@ -19,7 +19,6 @@
     <nav class="tsf-menu" aria-label="Điều hướng chính">
       <a href="/">Trang chủ</a>
       <a href="/san-pham">Tất cả áo dài</a>
-      <a href="/san-pham?collection=true">Bộ sưu tập</a>
       <a href="/san-pham?sort=newest">Sản phẩm mới</a>
       <a href="/san-pham?sale=true">Khuyến mãi</a>
     </nav>
@@ -97,7 +96,7 @@
         </a>
       </div>
 
-      <!-- 8 Mandatory Primary Menu Items -->
+      <!-- Primary Mobile Menu Items -->
       <nav class="mobile-nav-menu" aria-label="Menu điều hướng di động">
         <a href="/" class="mobile-nav-link">
           <span class="nav-num">01</span>
@@ -109,33 +108,28 @@
           <span class="nav-text">Tất cả áo dài</span>
           <span class="nav-arrow">→</span>
         </a>
-        <a href="/san-pham?collection=true" class="mobile-nav-link">
-          <span class="nav-num">03</span>
-          <span class="nav-text">Bộ sưu tập</span>
-          <span class="nav-arrow">→</span>
-        </a>
         <a href="/san-pham?sort=newest" class="mobile-nav-link">
-          <span class="nav-num">04</span>
+          <span class="nav-num">03</span>
           <span class="nav-text">Sản phẩm mới</span>
           <span class="nav-arrow">→</span>
         </a>
         <a href="/san-pham?sale=true" class="mobile-nav-link">
-          <span class="nav-num">05</span>
+          <span class="nav-num">04</span>
           <span class="nav-text">Khuyến mãi</span>
           <span class="nav-arrow">→</span>
         </a>
         <a href="/yeu-thich" class="mobile-nav-link">
-          <span class="nav-num">06</span>
+          <span class="nav-num">05</span>
           <span class="nav-text">Sản phẩm yêu thích</span>
           <span class="nav-badge"><%= badges.wishlist %></span>
         </a>
         <a href="/gio-hang" class="mobile-nav-link">
-          <span class="nav-num">07</span>
+          <span class="nav-num">06</span>
           <span class="nav-text">Giỏ hàng của bạn</span>
           <span class="nav-badge"><%= badges.cart %></span>
         </a>
         <a href="<%= currentUser ? '/tai-khoan' : '/dang-nhap' %>" class="mobile-nav-link highlight">
-          <span class="nav-num">08</span>
+          <span class="nav-num">07</span>
           <span class="nav-text"><%= currentUser ? `Tài khoản (${currentUser.fullName || currentUser.username})` : 'Tài khoản / Đăng nhập' %></span>
           <span class="nav-arrow">→</span>
         </a>

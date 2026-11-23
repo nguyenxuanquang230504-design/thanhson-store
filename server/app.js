@@ -3,10 +3,13 @@ const session = require('express-session');
 const path = require('path');
 const config = require('./config');
 const { ensureJsonFile } = require('./lib/json-store');
+const { connectMongo, isMongoConnected } = require('./lib/mongo');
 const viewLocals = require('./middleware/view-locals');
 const { securityHeaders, requireSafeOrigin, rateLimit } = require('./middleware/security');
 
 const app = express();
+
+app.set('trust proxy', 1);
 
 ensureJsonFile(config.usersFile, []);
 ensureJsonFile(config.ordersFile, []);
@@ -14,6 +17,18 @@ ensureJsonFile(config.ordersFile, []);
 if (config.nodeEnv === 'production' && !config.sessionSecret) {
   throw new Error('SESSION_SECRET is required in production');
 }
+
+// Serverless lazy MongoDB connection middleware
+app.use(async (req, res, next) => {
+  if (config.mongoDbUri && !isMongoConnected()) {
+    try {
+      await connectMongo(config.mongoDbUri);
+    } catch (err) {
+      console.error('Database connection error in request lifecycle:', err.message);
+    }
+  }
+  next();
+});
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));

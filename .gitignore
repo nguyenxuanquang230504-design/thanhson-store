@@ -6,5 +6,6 @@ node_modules/
 dist/
 coverage/
 data/exports/*.xlsx
+.vercel/
 .DS_Store
 Thumbs.db

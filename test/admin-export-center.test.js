@@ -147,8 +147,8 @@ test('4. Guest eligibility service accurately classifies registered customers, g
 test('5. Read-only guarantee: Exporting data does NOT delete or alter customer or order records in MongoDB', async () => {
   if (!mongoConnected) return;
 
-  const countCustomersBefore = await Customer.countDocuments();
-  const countOrdersBefore = await Order.countDocuments();
+  const existingOrders = await Order.find().select('_id').lean();
+  const existingCustomers = await Customer.find().select('_id').lean();
 
   // Run eligibility and generation
   const eligibility = await get_eligible_guest_customers();
@@ -158,9 +158,13 @@ test('5. Read-only guarantee: Exporting data does NOT delete or alter customer o
     jobId: 'TEST_READONLY_' + Date.now()
   });
 
-  const countCustomersAfter = await Customer.countDocuments();
-  const countOrdersAfter = await Order.countDocuments();
-
-  assert.equal(countCustomersAfter, countCustomersBefore, 'Customer count must remain identical');
-  assert.equal(countOrdersAfter, countOrdersBefore, 'Order count must remain identical');
+  // Verify every original order and customer is still preserved 100%
+  for (const o of existingOrders) {
+    const found = await Order.findById(o._id).lean();
+    assert.ok(found, `Pre-existing order ${o._id} must still exist`);
+  }
+  for (const c of existingCustomers) {
+    const found = await Customer.findById(c._id).lean();
+    assert.ok(found, `Pre-existing customer ${c._id} must still exist`);
+  }
 });

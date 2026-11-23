@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quản lý sản phẩm | Admin Thanh Sơn</title>
-  <link rel="stylesheet" href="/css/admin.css?v=20261125">
+  <link rel="stylesheet" href="/css/admin.css?v=20261126">
 </head>
 <body class="admin-shell">
   <%- include('_layout', { active: 'products' }) %>
@@ -67,14 +67,28 @@
           <label>Từ khóa Tags
             <input name="tags" placeholder="áo dài, cách tân, lễ tết, sự kiện, dạo phố">
           </label>
-          <label class="wide">Ảnh chính sản phẩm (URL)
-            <input name="image" type="url" placeholder="https://... hoặc /images/products/...">
+          <label class="wide">Ảnh chính sản phẩm (URL hoặc Đường dẫn)
+            <input name="image" type="text" placeholder="https://res.cloudinary.com/... hoặc /images/tsf-008.jpg">
           </label>
-          <div class="wide" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <label style="flex: 1; min-width: 220px; margin: 0;">Hoặc tải ảnh từ máy tính
-              <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp">
-            </label>
-            <button class="admin-button" id="uploadProductImage" type="button" style="align-self: flex-end;">Tải ảnh lên Cloudinary</button>
+          <div class="wide" style="background: #fafaf9; border: 1px dashed #d6d3d1; border-radius: 8px; padding: 14px; margin-top: 4px;">
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+              <div id="imagePreviewContainer" style="width: 64px; height: 80px; border-radius: 6px; border: 1px solid #e7e5e4; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                <img id="imagePreviewThumb" src="" alt="Xem trước ảnh" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                <span id="imagePreviewPlaceholder" style="font-size: 24px; color: #a8a29e;">🖼️</span>
+              </div>
+              <div style="flex: 1; min-width: 220px;">
+                <label style="margin: 0; font-weight: 600; font-size: 13px; color: var(--admin-ink);">
+                  Tải ảnh từ máy tính (Tự động tải lên Cloudinary khi chọn tệp)
+                  <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp" style="margin-top: 6px;">
+                </label>
+                <div id="uploadStatusText" style="font-size: 12px; margin-top: 4px; color: var(--admin-muted);">
+                  Chưa chọn tệp ảnh mới từ máy.
+                </div>
+              </div>
+              <button class="admin-button" id="uploadProductImage" type="button" style="align-self: center;">
+                Tải ảnh lên Cloudinary
+              </button>
+            </div>
           </div>
           <label class="wide">Mô tả ngắn
             <input name="shortDescription" placeholder="Mô tả tóm tắt hiển thị trên card sản phẩm và SEO">
@@ -327,6 +341,9 @@
         formEyebrow.textContent = 'PRODUCT DETAILS';
         submitBtn.textContent = 'Lưu sản phẩm';
         setVariants([]);
+        updateImagePreview('');
+        if (fileInput) fileInput.value = '';
+        if (uploadStatusText) uploadStatusText.innerHTML = 'Chưa chọn tệp ảnh mới từ máy.';
       }
 
       function render() {
@@ -534,6 +551,8 @@
             formTitle.textContent = `Chỉnh sửa: ${p.name}`;
             formEyebrow.textContent = 'EDIT PRODUCT';
             submitBtn.textContent = 'Cập nhật sản phẩm';
+            updateImagePreview(p.image);
+            if (uploadStatusText) uploadStatusText.innerHTML = p.image ? 'Đang sử dụng ảnh hiện tại của sản phẩm.' : 'Chưa có ảnh.';
             document.getElementById('productFormPanel').scrollIntoView({ behavior: 'smooth' });
           });
 
@@ -595,9 +614,134 @@
         }
       }
 
+      // Image Preview & Upload Controls
+      const previewThumb = document.getElementById('imagePreviewThumb');
+      const previewPlaceholder = document.getElementById('imagePreviewPlaceholder');
+      const uploadStatusText = document.getElementById('uploadStatusText');
+      const uploadBtn = document.getElementById('uploadProductImage');
+      const fileInput = document.getElementById('productImageFile');
+
+      function updateImagePreview(url) {
+        if (previewThumb && previewPlaceholder) {
+          if (url && typeof url === 'string' && url.trim()) {
+            previewThumb.src = url.trim();
+            previewThumb.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+          } else {
+            previewThumb.src = '';
+            previewThumb.style.display = 'none';
+            previewPlaceholder.style.display = 'block';
+          }
+        }
+      }
+
+      if (form.elements.image) {
+        form.elements.image.addEventListener('input', () => {
+          updateImagePreview(form.elements.image.value);
+        });
+      }
+
+      async function uploadSelectedImage(file) {
+        if (!file) return null;
+        if (file.size > 5 * 1024 * 1024) {
+          showNotice('Tệp ảnh phải nhỏ hơn 5 MB.', true);
+          return null;
+        }
+
+        if (uploadBtn) {
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = 'Đang tải lên...';
+        }
+        if (uploadStatusText) {
+          uploadStatusText.innerHTML = '<span style="color: #2563eb; font-weight: 600;">⏳ Đang tải ảnh lên Cloudinary...</span>';
+        }
+
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh.'));
+          reader.readAsDataURL(file);
+        }).catch(err => {
+          showNotice(err.message, true);
+          return null;
+        });
+
+        if (!dataUrl) {
+          if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Tải ảnh lên Cloudinary';
+          }
+          return null;
+        }
+
+        // Show immediate local preview
+        updateImagePreview(dataUrl);
+
+        try {
+          const res = await fetch('/api/admin/images', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dataUrl })
+          });
+          const result = await res.json();
+          if (!res.ok || !result.ok) throw new Error(result.message || 'Không thể tải ảnh lên Cloudinary.');
+          
+          form.elements.image.value = result.image;
+          updateImagePreview(result.image);
+          if (uploadStatusText) {
+            uploadStatusText.innerHTML = '<span style="color: #16a34a; font-weight: 600;">✓ Đã tải lên Cloudinary thành công!</span>';
+          }
+          showNotice('Đã tải ảnh lên Cloudinary thành công. URL đã tự động điền vào form.');
+          return result.image;
+        } catch (err) {
+          if (uploadStatusText) {
+            uploadStatusText.innerHTML = `<span style="color: #dc2626; font-weight: 600;">✗ Lỗi: ${err.message}</span>`;
+          }
+          showNotice(err.message, true);
+          return null;
+        } finally {
+          if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Tải ảnh lên Cloudinary';
+          }
+        }
+      }
+
+      // Auto-upload immediately upon selecting file
+      if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            await uploadSelectedImage(file);
+          }
+        });
+      }
+
+      // Manual click button
+      if (uploadBtn) {
+        uploadBtn.addEventListener('click', async () => {
+          const file = fileInput && fileInput.files && fileInput.files[0];
+          if (!file) return showNotice('Vui lòng chọn một ảnh JPEG, PNG hoặc WebP trước.', true);
+          await uploadSelectedImage(file);
+        });
+      }
+
       // Form submission (Add / Update)
       form.addEventListener('submit', async e => {
         e.preventDefault();
+
+        // If file chosen from computer but not yet uploaded, upload now
+        if (fileInput && fileInput.files && fileInput.files[0] && !form.elements.image.value.trim()) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Đang tải ảnh lên Cloudinary...';
+          const uploadedUrl = await uploadSelectedImage(fileInput.files[0]);
+          if (!uploadedUrl) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = form.elements.id.value ? 'Cập nhật sản phẩm' : 'Lưu sản phẩm';
+            return;
+          }
+        }
+
         const data = Object.fromEntries(new FormData(form));
         const id = data.id;
         delete data.id;
@@ -607,6 +751,8 @@
         data.variants = collectVariants();
 
         submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang lưu sản phẩm...';
+
         try {
           const res = await fetch(id ? `/api/admin/products/${id}` : '/api/admin/products', {
             method: id ? 'PUT' : 'POST',
@@ -623,46 +769,7 @@
           showNotice(err.message, true);
         } finally {
           submitBtn.disabled = false;
-        }
-      });
-
-      // Upload image to Cloudinary
-      document.getElementById('uploadProductImage').addEventListener('click', async () => {
-        const file = document.getElementById('productImageFile').files[0];
-        if (!file) return showNotice('Vui lòng chọn một ảnh JPEG, PNG hoặc WebP trước.', true);
-        if (file.size > 5 * 1024 * 1024) return showNotice('Tệp ảnh phải nhỏ hơn 5 MB.', true);
-
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh.'));
-          reader.readAsDataURL(file);
-        }).catch(err => {
-          showNotice(err.message, true);
-          return null;
-        });
-
-        if (!dataUrl) return;
-
-        const uploadBtn = document.getElementById('uploadProductImage');
-        uploadBtn.disabled = true;
-        uploadBtn.textContent = 'Đang tải lên...';
-
-        try {
-          const res = await fetch('/api/admin/images', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dataUrl })
-          });
-          const result = await res.json();
-          if (!res.ok || !result.ok) throw new Error(result.message || 'Không thể tải ảnh lên Cloudinary.');
-          form.elements.image.value = result.image;
-          showNotice('Đã tải ảnh lên Cloudinary thành công. URL đã được điền vào form.');
-        } catch (err) {
-          showNotice(err.message, true);
-        } finally {
-          uploadBtn.disabled = false;
-          uploadBtn.textContent = 'Tải ảnh lên Cloudinary';
+          submitBtn.textContent = form.elements.id.value ? 'Cập nhật sản phẩm' : 'Lưu sản phẩm';
         }
       });
 

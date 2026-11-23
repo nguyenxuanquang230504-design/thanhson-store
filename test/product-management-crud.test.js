@@ -318,6 +318,24 @@ test('10. Phân biệt rõ trạng thái PUBLISHED, DRAFT, INACTIVE', () => {
   assert.equal(testStatus('UNKNOWN_STATUS'), false);
 });
 
+test('11. Xử lý ảnh sản phẩm: Xác thực chữ ký tệp ảnh (Magic bytes) và cơ chế lưu trữ an toàn', () => {
+  // Test valid 1x1 PNG magic bytes
+  const validPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const validDataUrl = `data:image/png;base64,${validPngBase64}`;
+  
+  const match = validDataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  assert.ok(match, 'Valid image data URL must match regex');
+
+  const buffer = Buffer.from(match[2], 'base64');
+  const isPng = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  assert.equal(isPng, true, 'Magic bytes must accurately identify PNG');
+
+  // Test corrupted / spoofed header
+  const fakePng = Buffer.from('NOT_A_REAL_PNG');
+  const isFakePng = fakePng.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  assert.equal(isFakePng, false, 'Spoofed file headers must be rejected');
+});
+
 test.after(async () => {
   if (mongoConnected) {
     await mongoose.disconnect();

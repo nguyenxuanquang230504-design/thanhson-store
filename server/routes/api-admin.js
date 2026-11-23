@@ -96,7 +96,6 @@ router.post('/change-password', requireAdmin, asyncRoute(async (req, res) => {
 }));
 
 router.post('/images', requireAdmin, requireRole('SUPER_ADMIN', 'ADMIN'), asyncRoute(async (req, res) => {
-  if (!isCloudinaryConfigured()) return res.status(503).json({ ok: false, message: 'Cloudinary chưa được cấu hình.' });
   const dataUrl = String(req.body.dataUrl || '');
   const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
   if (!match) return res.status(400).json({ ok: false, message: 'Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.' });
@@ -108,20 +107,39 @@ router.post('/images', requireAdmin, requireRole('SUPER_ADMIN', 'ADMIN'), asyncR
     'image/webp': buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP'
   };
   if (!signatures[match[1]]) return res.status(400).json({ ok: false, message: 'Nội dung tệp không khớp định dạng ảnh.' });
-  const cloudinary = getCloudinary();
-  try {
-    const uploaded = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ folder: 'thanh-son/products', resource_type: 'image' }, (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }).end(buffer);
-    });
-    res.status(201).json({ ok: true, image: uploaded.secure_url, publicId: uploaded.public_id });
-  } catch (uploadErr) {
-    console.error('Cloudinary upload error:', uploadErr?.message || uploadErr);
-    const detail = uploadErr?.message ? ` (${uploadErr.message})` : '';
-    res.status(502).json({ ok: false, message: `Cloudinary từ chối tải ảnh${detail}. Kiểm tra API credentials.` });
+  
+  if (isCloudinaryConfigured()) {
+    const cloudinary = getCloudinary();
+    if (cloudinary) {
+      try {
+        const uploaded = await new Promise((resolve, reject) => {
+          cloudinary.uploader.upload_stream({ folder: 'thanh-son/products', resource_type: 'image' }, (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }).end(buffer);
+        });
+        return res.status(201).json({ ok: true, image: uploaded.secure_url, publicId: uploaded.public_id });
+      } catch (uploadErr) {
+        console.error('Cloudinary upload error:', uploadErr?.message || uploadErr);
+        const detail = uploadErr?.message ? ` (${uploadErr.message})` : '';
+        // Fallback to dataUrl so admin operations are never blocked by external credential errors
+        return res.status(200).json({
+          ok: true,
+          image: dataUrl,
+          fallback: true,
+          warning: `Cloudinary từ chối tải ảnh${detail}. Hệ thống đã lưu ảnh dưới dạng Data URL dự phòng.`
+        });
+      }
+    }
   }
+
+  // Cloudinary not configured fallback
+  return res.status(200).json({
+    ok: true,
+    image: dataUrl,
+    fallback: true,
+    warning: 'Cloudinary chưa được cấu hình. Hệ thống đã lưu ảnh dưới dạng Data URL dự phòng.'
+  });
 }));
 
 router.use(requireAdmin);

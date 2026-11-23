@@ -816,9 +816,13 @@
           form.elements.image.value = result.image;
           updateImagePreview(result.image);
           if (uploadStatusText) {
-            uploadStatusText.innerHTML = '<span style="color: #16a34a; font-weight: 600;">✓ Đã tải lên Cloudinary thành công!</span>';
+            if (result.fallback) {
+              uploadStatusText.innerHTML = `<span style="color: #d97706; font-weight: 600;">⚠ ${result.warning || 'Đã lưu ảnh dự phòng.'}</span>`;
+            } else {
+              uploadStatusText.innerHTML = '<span style="color: #16a34a; font-weight: 600;">✓ Đã tải lên Cloudinary thành công!</span>';
+            }
           }
-          showNotice('Đã tải ảnh lên Cloudinary thành công.');
+          showNotice(result.fallback ? (result.warning || 'Đã lưu ảnh dự phòng.') : 'Đã tải ảnh lên Cloudinary thành công.');
           setTimeout(() => {
             if (uploadProgressBar) uploadProgressBar.style.display = 'none';
           }, 1000);
